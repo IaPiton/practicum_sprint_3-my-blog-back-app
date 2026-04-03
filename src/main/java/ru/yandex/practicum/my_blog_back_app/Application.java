@@ -9,6 +9,7 @@ import org.apache.catalina.webresources.StandardRoot;
 import org.springframework.web.context.support.AnnotationConfigWebApplicationContext;
 import org.springframework.web.servlet.DispatcherServlet;
 import ru.yandex.practicum.my_blog_back_app.configurations.AppConfig;
+import ru.yandex.practicum.my_blog_back_app.persistence.config.DataBaseConfig;
 
 import java.io.File;
 
@@ -36,6 +37,7 @@ public class Application {
 
         AnnotationConfigWebApplicationContext appContext = new AnnotationConfigWebApplicationContext();
         appContext.register(AppConfig.class);
+        appContext.register(DataBaseConfig.class);
         appContext.setServletContext(context.getServletContext());
         appContext.refresh();
 
