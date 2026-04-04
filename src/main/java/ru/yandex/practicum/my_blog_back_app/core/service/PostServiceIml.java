@@ -136,8 +136,11 @@ public class PostServiceIml implements PostService {
     }
 
     @Override
-    public Long incrementLikes(Long id) {
-        return 0L;
+    public Long incrementLikes(Long postId) {
+        PostEntity postEntity = postRepository.findById(postId);
+        postEntity.setLikesCount(postEntity.getLikesCount() + 1);
+        postRepository.update(postEntity);
+        return postEntity.getLikesCount();
     }
 
     @Override
