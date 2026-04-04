@@ -1,7 +1,7 @@
 package ru.yandex.practicum.my_blog_back_app.api.controller;
 
 import jakarta.validation.Valid;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -18,14 +18,10 @@ import java.io.IOException;
 
 @RestController
 @RequestMapping("api/posts")
+@RequiredArgsConstructor
 public class PostController {
 
     private final PostService postService;
-
-    @Autowired
-    public PostController(PostService postService) {
-        this.postService = postService;
-    }
 
     @GetMapping
     public ResponseEntity<PostListResponse> getPosts(
@@ -54,14 +50,14 @@ public class PostController {
 
     @PutMapping("/{id}")
     public ResponseEntity<PostResponse> updatePost(
-            @PathVariable Long id,
+            @PathVariable("id") Long postId,
             @Valid @RequestBody PostUpdateRequest request) {
 
-        if (!id.equals(request.getId())) {
+        if (!postId.equals(request.getId())) {
             throw new IllegalArgumentException("Id поста в запросе отличается от id в теле");
         }
 
-        return ResponseEntity.ok(postService.updatePost(id, request));
+        return ResponseEntity.ok(postService.updatePost(postId, request));
     }
 
     @PostMapping("/{id}")

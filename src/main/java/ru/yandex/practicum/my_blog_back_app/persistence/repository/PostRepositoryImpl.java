@@ -99,7 +99,10 @@ public class PostRepositoryImpl implements PostRepository {
         params.addValue("limit", limit);
         params.addValue("offset", offset);
 
-        return jdbcTemplate.query(sql.toString(), params, postRowMapper);
+        return jdbcTemplate.query(sql.toString(), params, postRowMapper)
+                .stream()
+                .peek(post -> post.setTags(tagRepository.findTagsByPostId(post.getId())))
+                .toList();
     }
 
     @Override
@@ -149,5 +152,33 @@ public class PostRepositoryImpl implements PostRepository {
             postEntity.setTags(tagRepository.findTagsByPostId(postId));
         }
         return postEntity;
+    }
+
+    @Override
+    public void update(PostEntity postEntity) {
+        String postSql = """
+                UPDATE blog.posts
+                SET title = :title,
+                    text = :text,
+                    likes_count = :likesCount,
+                    image = :image,
+                    update_at = :updateAt
+                WHERE id = :id
+                """;
+
+        LocalDateTime now = LocalDateTime.now();
+
+        MapSqlParameterSource params = new MapSqlParameterSource();
+        params.addValue("id", postEntity.getId());
+        params.addValue("title", postEntity.getTitle());
+        params.addValue("text", postEntity.getText());
+        params.addValue("likesCount", postEntity.getLikesCount() != null ? postEntity.getLikesCount() : 0);
+        params.addValue("image", postEntity.getImage());
+        params.addValue("updateAt", now);
+
+        tagRepository.saveTagsAndPost(postEntity);
+
+        jdbcTemplate.update(postSql, params);
+
     }
 }

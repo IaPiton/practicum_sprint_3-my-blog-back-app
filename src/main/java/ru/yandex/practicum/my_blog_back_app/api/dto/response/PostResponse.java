@@ -14,6 +14,7 @@ import java.util.List;
 @AllArgsConstructor
 public class PostResponse {
     private Long id;
+    private byte[] image;
     private String title;
     private String text;
     private List<String> tags = new ArrayList<>();

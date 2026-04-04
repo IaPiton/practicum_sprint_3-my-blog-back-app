@@ -20,6 +20,6 @@ public class TagEntity {
         @Column(name = "name", nullable = false, unique = true, length = 100)
         private String name;
 
-        @ManyToMany(mappedBy = "tags", fetch = FetchType.LAZY)
-        private List<PostEntity> posts = new ArrayList<>();
+        @Column(name = "post_id")
+        private Long postId;
 }

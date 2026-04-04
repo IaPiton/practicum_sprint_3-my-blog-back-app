@@ -12,4 +12,6 @@ public interface PostRepository {
     int countPostsWithFilters(String titleSubstring, List<String> tags);
 
     PostEntity findById(Long postId);
+
+    void update(PostEntity post);
 }

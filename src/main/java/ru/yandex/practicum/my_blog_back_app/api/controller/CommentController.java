@@ -10,6 +10,7 @@ import ru.yandex.practicum.my_blog_back_app.api.dto.request.CommentUpdateRequest
 import ru.yandex.practicum.my_blog_back_app.api.dto.response.CommentResponse;
 import ru.yandex.practicum.my_blog_back_app.core.service.CommentService;
 
+import java.util.Collections;
 import java.util.List;
 
 @RestController
@@ -24,12 +25,15 @@ public class CommentController {
     }
 
     @GetMapping
-    public ResponseEntity<List<CommentResponse>> getCommentsByPostId(@PathVariable("postId") Long postId) {
-        if (!commentService.postExists(postId)) {
-            throw new IllegalArgumentException("Пост с id: " + postId + " не найден");
+    public ResponseEntity<List<CommentResponse>> getCommentsByPostId(@PathVariable("postId") String postId) {
+        if ("undefined".equals(postId)) {
+            return ResponseEntity.ok(Collections.emptyList());
+        }
+        if (commentService.postExists(Long.parseLong(postId))) {
+            return ResponseEntity.ok(commentService.getCommentsByPostId(Long.parseLong(postId)));
         }
 
-        return ResponseEntity.ok(commentService.getCommentsByPostId(postId));
+        throw new IllegalArgumentException(String.format("Пост с id: %d не найден", postId));
     }
 
     @GetMapping("/{commentId}")
@@ -61,12 +65,12 @@ public class CommentController {
                     String.format("Пост с id: %d из запроса не совпадает с id: %d из тела", postId, request.getPostId()));
         }
 
-        if (!commentService.postExists(postId)) {
-            throw new IllegalArgumentException(String.format("Пост с id: %d не найден", postId));
+        if (commentService.postExists(postId)) {
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(commentService.createComment(request));
         }
+        throw new IllegalArgumentException(String.format("Пост с id: %d не найден", postId));
 
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(commentService.createComment(request));
     }
 
     @PutMapping("/{commentId}")

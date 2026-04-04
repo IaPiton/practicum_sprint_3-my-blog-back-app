@@ -9,13 +9,11 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class CommentUpdateRequest {
-
-    @NotBlank(message = "Id пустой")
     private Long id;
 
     @NotBlank(message = "Text пустой")
     private String text;
 
-    @NotBlank(message = "PostId пустой")
+
     private Long postId;
 }

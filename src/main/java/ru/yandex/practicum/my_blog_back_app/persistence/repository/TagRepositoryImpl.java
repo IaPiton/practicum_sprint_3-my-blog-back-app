@@ -76,6 +76,18 @@ public class TagRepositoryImpl implements TagRepository {
         }
     }
 
+    @Override
+    public void deleteTagAndPost(Long postId) {
+        String sql = """
+                DELETE FROM blog.post_tags
+                WHERE post_id = :postId
+                """;
+        MapSqlParameterSource params = new MapSqlParameterSource();
+        params.addValue("postId", postId);
+
+        jdbcTemplate.update(sql, params);
+    }
+
     private TagEntity saveTag(String tag) {
         String sql = """
         INSERT INTO blog.tags(name)

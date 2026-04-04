@@ -17,6 +17,7 @@ import ru.yandex.practicum.my_blog_back_app.persistence.repository.TagRepository
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
 @Service
 public class PostServiceIml implements PostService {
@@ -105,7 +106,27 @@ public class PostServiceIml implements PostService {
 
     @Override
     public PostResponse updatePost(Long id, PostUpdateRequest request) {
-        return null;
+        PostEntity postEntity = postRepository.findById(request.getId());
+
+        postEntity.setTitle(request.getTitle());
+        postEntity.setText(request.getText());
+
+        if (!request.getTags().isEmpty()) {
+            tagRepository.deleteTagAndPost(request.getId());
+            List<TagEntity> tagEntities = tagRepository.getTags(request.getTags());
+            postEntity.setTags(tagEntities);
+        }
+
+        postRepository.update(postEntity);
+        return PostResponse.builder()
+                .id(postEntity.getId())
+                .title(postEntity.getTitle())
+                .text(postEntity.getText())
+                .likesCount(postEntity.getLikesCount())
+                .tags(postEntity.getTags().stream().map(TagEntity::getName).toList())
+                .commentsCount(commentRepository.countCommentsByPost(postEntity.getId()))
+                .image(postEntity.getImage())
+                .build();
     }
 
     @Override
@@ -122,7 +143,7 @@ public class PostServiceIml implements PostService {
     public void updatePostImage(Long postId, byte[] image) {
         PostEntity postEntity = postRepository.findById(postId);
         postEntity.setImage(image);
-        postRepository.savePost(postEntity);
+        postRepository.update(postEntity);
     }
 
     @Override

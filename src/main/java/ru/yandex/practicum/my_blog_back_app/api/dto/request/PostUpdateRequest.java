@@ -22,12 +22,4 @@ public class PostUpdateRequest {
 
     private List<String> tags = new ArrayList<>();
 
-    public PostUpdateRequest(Long id, String title,
-                             String text,
-                             List<String> tags) {
-        this.id = id;
-        this.title = title;
-        this.text = text;
-        this.tags = tags != null ? tags : new ArrayList<>();
-    }
 }

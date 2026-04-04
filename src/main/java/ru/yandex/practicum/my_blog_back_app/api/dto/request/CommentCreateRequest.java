@@ -13,6 +13,5 @@ public class CommentCreateRequest {
     @NotBlank(message = "Text пустой")
     private String text;
 
-    @NotBlank(message = "PostId пустой")
     private Long postId;
 }
