@@ -14,4 +14,6 @@ public interface PostRepository {
     PostEntity findById(Long postId);
 
     void update(PostEntity post);
+
+    void delete(Long postId);
 }

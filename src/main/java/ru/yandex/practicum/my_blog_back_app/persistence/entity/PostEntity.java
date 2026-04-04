@@ -36,15 +36,7 @@ public class PostEntity {
     @Column(name = "update_at", nullable = false)
     private LocalDateTime updateAt;
 
-    @ManyToMany(fetch = FetchType.LAZY)
-    @JoinTable(
-            name = "post_tags",
-            schema = "blog",
-            joinColumns = @JoinColumn(name = "post_id"),
-            inverseJoinColumns = @JoinColumn(name = "tag_id")
-    )
-    private List<TagEntity> tags = new ArrayList<>();
+    @Column(name = "tags", nullable = false)
+    private List<TagEntity> tags;
 
-    @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<CommentsEntity> comments = new ArrayList<>();
 }

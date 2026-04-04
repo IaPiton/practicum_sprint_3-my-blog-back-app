@@ -1,6 +1,5 @@
 package ru.yandex.practicum.my_blog_back_app.persistence.repository;
 
-import jakarta.validation.constraints.NotNull;
 import ru.yandex.practicum.my_blog_back_app.persistence.entity.PostEntity;
 import ru.yandex.practicum.my_blog_back_app.persistence.entity.TagEntity;
 

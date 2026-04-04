@@ -181,4 +181,16 @@ public class PostRepositoryImpl implements PostRepository {
         jdbcTemplate.update(postSql, params);
 
     }
+
+    @Override
+    public void delete(Long postId) {
+        String sql = """
+                DELETE FROM blog.posts
+                WHERE id = :postId
+                """;
+        MapSqlParameterSource params = new MapSqlParameterSource();
+        params.addValue("postId", postId);
+
+        jdbcTemplate.update(sql, params);
+    }
 }

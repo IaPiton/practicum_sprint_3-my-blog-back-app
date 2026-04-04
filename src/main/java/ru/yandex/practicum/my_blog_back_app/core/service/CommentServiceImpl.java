@@ -54,12 +54,19 @@ public class CommentServiceImpl implements CommentService {
 
     @Override
     public CommentResponse updateComment(Long commentId, CommentUpdateRequest request) {
-        return null;
+        CommentsEntity commentsEntity = commentRepository.findById(commentId);
+        commentsEntity.setText(request.getText());
+        commentRepository.update(commentsEntity);
+        return CommentResponse.builder()
+                .id(commentsEntity.getId())
+                .text(commentsEntity.getText())
+                .postId(commentsEntity.getPostId())
+                .build();
     }
 
     @Override
     public void deleteComment(Long commentId) {
-
+        commentRepository.deleteByCommentId(commentId);
     }
 
     @Override

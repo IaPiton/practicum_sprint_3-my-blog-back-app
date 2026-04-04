@@ -14,4 +14,10 @@ public interface CommentRepository {
     Long save(CommentsEntity commentsEntity);
 
     CommentsEntity findById(Long commentId);
+
+    void update(CommentsEntity commentsEntity);
+
+    void deleteByCommentId(Long commentId);
+
+    void deleteByPostId(Long postId);
 }

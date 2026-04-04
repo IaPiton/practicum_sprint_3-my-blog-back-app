@@ -33,7 +33,7 @@ public class CommentController {
             return ResponseEntity.ok(commentService.getCommentsByPostId(Long.parseLong(postId)));
         }
 
-        throw new IllegalArgumentException(String.format("Пост с id: %d не найден", postId));
+        throw new IllegalArgumentException(String.format("Пост с id: %s не найден", postId));
     }
 
     @GetMapping("/{commentId}")
@@ -47,11 +47,6 @@ public class CommentController {
 
         CommentResponse comment = commentService.getCommentById(commentId);
 
-        if (!comment.getPostId().equals(postId)) {
-            throw new IllegalArgumentException(
-                    String.format("Комментарий с id: %d не принадлежит посту c id: %d", commentId, postId));
-        }
-
         return ResponseEntity.ok(comment);
     }
 
@@ -59,11 +54,6 @@ public class CommentController {
     public ResponseEntity<CommentResponse> createComment(
             @PathVariable("postId") Long postId,
             @Valid @RequestBody CommentCreateRequest request) {
-
-        if (!postId.equals(request.getPostId())) {
-            throw new IllegalArgumentException(
-                    String.format("Пост с id: %d из запроса не совпадает с id: %d из тела", postId, request.getPostId()));
-        }
 
         if (commentService.postExists(postId)) {
             return ResponseEntity.status(HttpStatus.CREATED)
@@ -79,13 +69,8 @@ public class CommentController {
             @PathVariable("commentId") Long commentId,
             @Valid @RequestBody CommentUpdateRequest request) {
 
-        if (!postId.equals(request.getPostId())) {
-            throw new IllegalArgumentException(
-                    String.format("Пост с id: %d из запроса не совпадает с id: %d из тела", postId, request.getPostId()));
-        }
-
-        if (!commentService.postExists(postId)) {
-            throw new IllegalArgumentException(String.format("Пост с id: %d не найден", postId));
+        if (!commentService.postExists(request.getPostId())) {
+            throw new IllegalArgumentException(String.format("Пост с id: %d не найден", request.getPostId()));
         }
 
         return ResponseEntity.ok(commentService.updateComment(commentId, request));
@@ -98,13 +83,6 @@ public class CommentController {
 
         if (!commentService.postExists(postId)) {
             throw new IllegalArgumentException(String.format("Пост с id: %d не найден", postId));
-        }
-
-        CommentResponse comment = commentService.getCommentById(commentId);
-
-        if (!comment.getPostId().equals(postId)) {
-            throw new IllegalArgumentException(
-                    String.format("Комментарий с id: %d не принадлежит посту c id: %d", commentId, postId));
         }
 
         commentService.deleteComment(commentId);
@@ -120,6 +98,5 @@ public class CommentController {
 
         return ResponseEntity.ok(commentService.getCommentsCountByPostId(postId));
     }
-
 
 }

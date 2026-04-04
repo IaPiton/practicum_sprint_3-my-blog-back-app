@@ -107,4 +107,47 @@ public class CommentRepositoryImpl implements CommentRepository {
         return jdbcTemplate.queryForObject(sql, params, commentRowMapper);
     }
 
+    @Override
+    public void update(CommentsEntity commentsEntity) {
+         String postSql = """
+                UPDATE blog.comments
+                SET text = :text,
+                    update_at = :updateAt
+                WHERE id = :id
+                """;
+
+        LocalDateTime now = LocalDateTime.now();
+
+        MapSqlParameterSource params = new MapSqlParameterSource();
+        params.addValue("id", commentsEntity.getId());
+        params.addValue("text", commentsEntity.getText());
+        params.addValue("updateAt", now);
+
+        jdbcTemplate.update(postSql, params);
+    }
+
+    @Override
+    public void deleteByCommentId(Long commentId) {
+        String sql = """
+                DELETE FROM blog.comments
+                WHERE id = :id
+                """;
+        MapSqlParameterSource params = new MapSqlParameterSource();
+        params.addValue("id", commentId);
+
+        jdbcTemplate.update(sql, params);
+    }
+
+    @Override
+    public void deleteByPostId(Long postId) {
+        String sql = """
+                DELETE FROM blog.comments
+                WHERE post_id = :postId
+                """;
+        MapSqlParameterSource params = new MapSqlParameterSource();
+        params.addValue("postId", postId);
+
+        jdbcTemplate.update(sql, params);
+    }
+
 }

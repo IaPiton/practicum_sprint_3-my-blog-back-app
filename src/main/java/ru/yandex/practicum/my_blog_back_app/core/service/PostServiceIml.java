@@ -17,7 +17,6 @@ import ru.yandex.practicum.my_blog_back_app.persistence.repository.TagRepository
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Objects;
 
 @Service
 public class PostServiceIml implements PostService {
@@ -130,8 +129,10 @@ public class PostServiceIml implements PostService {
     }
 
     @Override
-    public void deletePost(Long id) {
-
+    public void deletePost(Long postId) {
+        commentRepository.deleteByPostId(postId);
+        tagRepository.deleteTagAndPost(postId);
+        postRepository.delete(postId);
     }
 
     @Override
