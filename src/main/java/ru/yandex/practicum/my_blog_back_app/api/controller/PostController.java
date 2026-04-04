@@ -44,7 +44,7 @@ public class PostController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<PostResponse> getPostById(@PathVariable Long id) {
+    public ResponseEntity<PostResponse> getPostById(@PathVariable("id") Long id) {
         return ResponseEntity.ok(postService.getPostById(id));
     }
 
@@ -66,13 +66,13 @@ public class PostController {
     }
 
     @PostMapping("/{id}")
-    public ResponseEntity<Void> deletePost(@PathVariable Long id) {
+    public ResponseEntity<Void> deletePost(@PathVariable("id") Long id) {
         postService.deletePost(id);
         return ResponseEntity.ok().build();
     }
 
     @PostMapping("/{id}/likes")
-    public ResponseEntity<Long> incrementLikes(@PathVariable Long id) {
+    public ResponseEntity<Long> incrementLikes(@PathVariable("id") Long id) {
         return ResponseEntity.ok(postService.incrementLikes(id));
     }
 
@@ -99,7 +99,7 @@ public class PostController {
     @GetMapping(value = "/{id}/image",
             produces = {MediaType.IMAGE_JPEG_VALUE, MediaType.IMAGE_PNG_VALUE,
                         MediaType.IMAGE_GIF_VALUE, MediaType.APPLICATION_OCTET_STREAM_VALUE})
-    public ResponseEntity<byte[]> getPostImage(@PathVariable Long id) {
+    public ResponseEntity<byte[]> getPostImage(@PathVariable("id") Long id) {
         ImagePost imagePost = postService.getPostImage(id);
 
         if (imagePost.getImage() == null || imagePost.getImage().length == 0) {

@@ -29,6 +29,7 @@
         <dotenv-java.version>3.0.0</dotenv-java.version>
         <jakarta.persistence-api.version>3.1.0</jakarta.persistence-api.version>
         <hibernate-core.version>6.3.1.Final</hibernate-core.version>
+        <hibernate-validator.version>8.0.1.Final</hibernate-validator.version>
     </properties>
 
     <dependencyManagement>
@@ -130,6 +131,12 @@
                 <version>${hibernate-core.version}</version>
             </dependency>
 
+            <dependency>
+                <groupId>org.hibernate.validator</groupId>
+                <artifactId>hibernate-validator</artifactId>
+                <version>${hibernate-validator.version}</version>
+            </dependency>
+
         </dependencies>
     </dependencyManagement>
 
@@ -213,6 +220,11 @@
         <dependency>
             <groupId>org.hibernate.orm</groupId>
             <artifactId>hibernate-core</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.hibernate.validator</groupId>
+            <artifactId>hibernate-validator</artifactId>
         </dependency>
 
     </dependencies>

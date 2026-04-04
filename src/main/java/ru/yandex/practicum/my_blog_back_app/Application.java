@@ -18,7 +18,7 @@ public class Application {
     public static void main(String[] args) throws LifecycleException {
         Tomcat tomcat = new Tomcat();
         tomcat.setPort(8080);
-        tomcat.getConnector(); // Инициализируем коннектор
+        tomcat.getConnector();
 
         String baseDir = System.getProperty("java.io.tmpdir");
         tomcat.setBaseDir(baseDir);

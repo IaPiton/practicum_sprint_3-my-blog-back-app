@@ -24,7 +24,7 @@ public class CommentController {
     }
 
     @GetMapping
-    public ResponseEntity<List<CommentResponse>> getCommentsByPostId(@PathVariable Long postId) {
+    public ResponseEntity<List<CommentResponse>> getCommentsByPostId(@PathVariable("postId") Long postId) {
         if (!commentService.postExists(postId)) {
             throw new IllegalArgumentException("Пост с id: " + postId + " не найден");
         }
@@ -34,8 +34,8 @@ public class CommentController {
 
     @GetMapping("/{commentId}")
     public ResponseEntity<CommentResponse> getCommentById(
-            @PathVariable Long postId,
-            @PathVariable Long commentId) {
+            @PathVariable("postId") Long postId,
+            @PathVariable("commentId") Long commentId) {
 
         if (!commentService.postExists(postId)) {
             throw new IllegalArgumentException(String.format("Пост с id: %d не найден", postId));
@@ -53,7 +53,7 @@ public class CommentController {
 
     @PostMapping
     public ResponseEntity<CommentResponse> createComment(
-            @PathVariable Long postId,
+            @PathVariable("postId") Long postId,
             @Valid @RequestBody CommentCreateRequest request) {
 
         if (!postId.equals(request.getPostId())) {
@@ -71,8 +71,8 @@ public class CommentController {
 
     @PutMapping("/{commentId}")
     public ResponseEntity<CommentResponse> updateComment(
-            @PathVariable Long postId,
-            @PathVariable Long commentId,
+            @PathVariable("postId") Long postId,
+            @PathVariable("commentId") Long commentId,
             @Valid @RequestBody CommentUpdateRequest request) {
 
         if (!postId.equals(request.getPostId())) {
@@ -89,8 +89,8 @@ public class CommentController {
 
     @DeleteMapping("/{commentId}")
     public ResponseEntity<Void> deleteComment(
-            @PathVariable Long postId,
-            @PathVariable Long commentId) {
+            @PathVariable("postId") Long postId,
+            @PathVariable("commentId") Long commentId) {
 
         if (!commentService.postExists(postId)) {
             throw new IllegalArgumentException(String.format("Пост с id: %d не найден", postId));
@@ -108,7 +108,7 @@ public class CommentController {
     }
 
     @GetMapping("/count")
-    public ResponseEntity<Long> getCommentsCount(@PathVariable Long postId) {
+    public ResponseEntity<Long> getCommentsCount(@PathVariable("postId") Long postId) {
 
         if (!commentService.postExists(postId)) {
             throw new IllegalArgumentException(String.format("Пост с id: %d не найден", postId));
