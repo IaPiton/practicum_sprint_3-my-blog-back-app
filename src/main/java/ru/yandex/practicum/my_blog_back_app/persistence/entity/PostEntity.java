@@ -2,6 +2,7 @@ package ru.yandex.practicum.my_blog_back_app.persistence.entity;
 
 import jakarta.persistence.*;
 import lombok.Getter;
+import lombok.Setter;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -9,6 +10,7 @@ import java.util.List;
 
 @Entity
 @Getter
+@Setter
 @Table(name = "posts", schema = "blog")
 public class PostEntity {
 
@@ -16,7 +18,7 @@ public class PostEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "title", nullable = false, length = 255)
+    @Column(name = "title", nullable = false)
     private String title;
 
     @Column(name = "text", nullable = false, columnDefinition = "TEXT")
