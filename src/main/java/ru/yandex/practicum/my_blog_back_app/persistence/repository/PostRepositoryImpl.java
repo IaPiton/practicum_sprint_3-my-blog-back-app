@@ -9,6 +9,7 @@ import ru.yandex.practicum.my_blog_back_app.persistence.entity.PostEntity;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 
 @Component
 public class PostRepositoryImpl implements PostRepository {
@@ -37,8 +38,8 @@ public class PostRepositoryImpl implements PostRepository {
     @Override
     public PostEntity savePost(PostEntity postEntity) {
         String postSql = """
-                INSERT INTO blog.posts(title, text, likes_count, create_at, update_at)
-                VALUES (:title, :text, :likesCount, :createAt, :updateAt)
+                INSERT INTO blog.posts(title, text, likes_count, image, create_at, update_at)
+                VALUES (:title, :text, :likesCount, :image, :createAt,  :updateAt)
                 RETURNING id;
                 """;
 
@@ -48,6 +49,7 @@ public class PostRepositoryImpl implements PostRepository {
         params.addValue("title", postEntity.getTitle());
         params.addValue("text", postEntity.getText());
         params.addValue("likesCount", postEntity.getLikesCount() != null ? postEntity.getLikesCount() : 0);
+        params.addValue("image", postEntity.getImage());
         params.addValue("createAt", now);
         params.addValue("updateAt", now);
 
@@ -142,6 +144,10 @@ public class PostRepositoryImpl implements PostRepository {
         MapSqlParameterSource params = new MapSqlParameterSource();
         params.addValue("id", postId);
 
-        return jdbcTemplate.queryForObject(sql, params, postRowMapper);
+        PostEntity postEntity = jdbcTemplate.queryForObject(sql, params, postRowMapper);
+        if (Objects.nonNull(postEntity)) {
+            postEntity.setTags(tagRepository.findTagsByPostId(postId));
+        }
+        return postEntity;
     }
 }

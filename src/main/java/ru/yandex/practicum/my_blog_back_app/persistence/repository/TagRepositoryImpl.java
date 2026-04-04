@@ -1,6 +1,7 @@
 package ru.yandex.practicum.my_blog_back_app.persistence.repository;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataAccessException;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
@@ -9,6 +10,7 @@ import org.springframework.stereotype.Component;
 import ru.yandex.practicum.my_blog_back_app.persistence.entity.PostEntity;
 import ru.yandex.practicum.my_blog_back_app.persistence.entity.TagEntity;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -52,6 +54,26 @@ public class TagRepositoryImpl implements TagRepository {
                 .toArray(MapSqlParameterSource[]::new);
 
         jdbcTemplate.batchUpdate(tagSql, batchParams);
+    }
+
+    @Override
+    public List<TagEntity> findTagsByPostId(Long postId) {
+        String sql = """
+        SELECT t.id, t.name
+        FROM blog.tags t
+        JOIN blog.post_tags pt ON t.id = pt.tag_id
+        WHERE pt.post_id = :postId
+        ORDER BY t.name
+        """;
+
+        MapSqlParameterSource params = new MapSqlParameterSource();
+        params.addValue("postId", postId);
+
+        try {
+              return jdbcTemplate.query(sql, params, tagRowMapper);
+        } catch (DataAccessException e) {
+            return Collections.emptyList();
+        }
     }
 
     private TagEntity saveTag(String tag) {

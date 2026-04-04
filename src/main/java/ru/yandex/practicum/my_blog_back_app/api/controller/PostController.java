@@ -11,7 +11,6 @@ import ru.yandex.practicum.my_blog_back_app.api.dto.request.PostCreateRequest;
 import ru.yandex.practicum.my_blog_back_app.api.dto.request.PostUpdateRequest;
 import ru.yandex.practicum.my_blog_back_app.api.dto.response.PostListResponse;
 import ru.yandex.practicum.my_blog_back_app.api.dto.response.PostResponse;
-import ru.yandex.practicum.my_blog_back_app.core.model.ImagePost;
 import ru.yandex.practicum.my_blog_back_app.core.service.PostService;
 
 import java.io.IOException;
@@ -78,7 +77,7 @@ public class PostController {
 
     @PutMapping(value = "/{id}/image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Void> updatePostImage(
-            @PathVariable Long id,
+            @PathVariable("id") Long postId,
             @RequestParam("image")MultipartFile image) {
 
         if (image == null || image.isEmpty()) {
@@ -89,7 +88,7 @@ public class PostController {
             throw new IllegalArgumentException("Размер файла превышает 5Мб");
         }
         try {
-            postService.updatePostImage(id, image.getBytes());
+            postService.updatePostImage(postId, image.getBytes());
             return ResponseEntity.ok().build();
         } catch (IOException e) {
             throw new RuntimeException("Ошибка при чтении файла", e);
@@ -99,15 +98,14 @@ public class PostController {
     @GetMapping(value = "/{id}/image",
             produces = {MediaType.IMAGE_JPEG_VALUE, MediaType.IMAGE_PNG_VALUE,
                         MediaType.IMAGE_GIF_VALUE, MediaType.APPLICATION_OCTET_STREAM_VALUE})
-    public ResponseEntity<byte[]> getPostImage(@PathVariable("id") Long id) {
-        ImagePost imagePost = postService.getPostImage(id);
+    public ResponseEntity<byte[]> getPostImage(@PathVariable("id") Long postId) {
+        byte[] image = postService.getPostImage(postId);
 
-        if (imagePost.getImage() == null || imagePost.getImage().length == 0) {
-            return ResponseEntity.notFound().build();
+        if (image == null || image.length == 0) {
+            return ResponseEntity.ok().contentLength(0).body(null);
         }
         return ResponseEntity.ok()
-                .contentType(imagePost.getContentType())
-                .contentLength(imagePost.getImage().length)
-                .body(imagePost.getImage());
+                .contentLength(image.length)
+                .body(image);
     }
 }

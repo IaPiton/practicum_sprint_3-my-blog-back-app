@@ -6,7 +6,6 @@ import ru.yandex.practicum.my_blog_back_app.api.dto.request.PostCreateRequest;
 import ru.yandex.practicum.my_blog_back_app.api.dto.request.PostUpdateRequest;
 import ru.yandex.practicum.my_blog_back_app.api.dto.response.PostListResponse;
 import ru.yandex.practicum.my_blog_back_app.api.dto.response.PostResponse;
-import ru.yandex.practicum.my_blog_back_app.core.model.ImagePost;
 import ru.yandex.practicum.my_blog_back_app.api.dto.response.PostPreview;
 import ru.yandex.practicum.my_blog_back_app.core.model.SearchCriteria;
 import ru.yandex.practicum.my_blog_back_app.persistence.entity.PostEntity;
@@ -120,13 +119,16 @@ public class PostServiceIml implements PostService {
     }
 
     @Override
-    public void updatePostImage(Long id, byte[] image) {
-
+    public void updatePostImage(Long postId, byte[] image) {
+        PostEntity postEntity = postRepository.findById(postId);
+        postEntity.setImage(image);
+        postRepository.savePost(postEntity);
     }
 
     @Override
-    public ImagePost getPostImage(Long id) {
-        return null;
+    public byte[] getPostImage(Long postId) {
+        PostEntity postEntity = postRepository.findById(postId);
+        return postEntity.getImage();
     }
 
 
@@ -171,4 +173,5 @@ public class PostServiceIml implements PostService {
                 .commentsCount(commentRepository.countCommentsByPost(post.getId()))
                 .build();
     }
+
 }

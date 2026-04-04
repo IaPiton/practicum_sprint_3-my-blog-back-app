@@ -9,4 +9,6 @@ public interface TagRepository {
     List<TagEntity> getTags(List<String> tags);
 
     void saveTagsAndPost(PostEntity postEntity);
+
+    List<TagEntity> findTagsByPostId(Long postId);
 }
