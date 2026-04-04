@@ -19,6 +19,12 @@ public class ApiExceptionHandler {
                 .body(new ErrorResponse("BAD_REQUEST", e.getMessage()));
     }
 
+    @ExceptionHandler(InvalidImageException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidImage(InvalidImageException e) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ErrorResponse("BAD_REQUEST", e.getMessage()));
+    }
+
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<ErrorResponse> handleInternalError() {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)

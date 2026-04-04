@@ -1,6 +1,7 @@
 package ru.yandex.practicum.my_blog_back_app.persistence.repository;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
+import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -9,19 +10,14 @@ import ru.yandex.practicum.my_blog_back_app.persistence.entity.PostEntity;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Objects;
+import java.util.Optional;
 
 @Component
+@RequiredArgsConstructor
 public class PostRepositoryImpl implements PostRepository {
     private final NamedParameterJdbcTemplate jdbcTemplate;
     private final TagRepository tagRepository;
 
-    @Autowired
-    public PostRepositoryImpl(NamedParameterJdbcTemplate jdbcTemplate,
-                              TagRepository tagRepository) {
-        this.jdbcTemplate = jdbcTemplate;
-        this.tagRepository = tagRepository;
-    }
 
     private final RowMapper<PostEntity> postRowMapper = (rs, rowNum) -> {
         PostEntity post = new PostEntity();
@@ -139,7 +135,7 @@ public class PostRepositoryImpl implements PostRepository {
     }
 
     @Override
-    public PostEntity findById(Long postId) {
+    public Optional<PostEntity> findById(Long postId) {
         String sql = """
                 SELECT * FROM blog.posts
                 WHERE id = :id;
@@ -147,11 +143,15 @@ public class PostRepositoryImpl implements PostRepository {
         MapSqlParameterSource params = new MapSqlParameterSource();
         params.addValue("id", postId);
 
-        PostEntity postEntity = jdbcTemplate.queryForObject(sql, params, postRowMapper);
-        if (Objects.nonNull(postEntity)) {
-            postEntity.setTags(tagRepository.findTagsByPostId(postId));
+        try {
+            PostEntity postEntity = jdbcTemplate.queryForObject(sql, params, postRowMapper);
+            if (postEntity != null) {
+                postEntity.setTags(tagRepository.findTagsByPostId(postId));
+            }
+            return Optional.ofNullable(postEntity);
+        } catch (EmptyResultDataAccessException e) {
+            return Optional.empty();
         }
-        return postEntity;
     }
 
     @Override

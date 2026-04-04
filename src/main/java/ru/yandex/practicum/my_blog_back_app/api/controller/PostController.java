@@ -12,6 +12,7 @@ import ru.yandex.practicum.my_blog_back_app.api.dto.request.PostUpdateRequest;
 import ru.yandex.practicum.my_blog_back_app.api.dto.response.PostListResponse;
 import ru.yandex.practicum.my_blog_back_app.api.dto.response.PostResponse;
 import ru.yandex.practicum.my_blog_back_app.core.service.PostService;
+import ru.yandex.practicum.my_blog_back_app.core.validator.ImageValidator;
 
 import java.io.IOException;
 
@@ -22,6 +23,7 @@ import java.io.IOException;
 public class PostController {
 
     private final PostService postService;
+    private final ImageValidator imageValidator;
 
     @GetMapping
     public ResponseEntity<PostListResponse> getPosts(
@@ -76,13 +78,8 @@ public class PostController {
             @PathVariable("id") Long postId,
             @RequestParam("image")MultipartFile image) {
 
-        if (image == null || image.isEmpty()) {
-            throw new IllegalArgumentException("Передан неккорректный файл");
-        }
+        imageValidator.validate(image);
 
-        if (image.getSize() > 5 * 1024 * 1024) {
-            throw new IllegalArgumentException("Размер файла превышает 5Мб");
-        }
         try {
             postService.updatePostImage(postId, image.getBytes());
             return ResponseEntity.ok().build();

@@ -1,5 +1,6 @@
 package ru.yandex.practicum.my_blog_back_app.persistence.repository;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
@@ -12,12 +13,9 @@ import java.util.Collections;
 import java.util.List;
 
 @Component
+@RequiredArgsConstructor
 public class CommentRepositoryImpl implements CommentRepository {
     private final NamedParameterJdbcTemplate jdbcTemplate;
-
-    public CommentRepositoryImpl(NamedParameterJdbcTemplate jdbcTemplate) {
-        this.jdbcTemplate = jdbcTemplate;
-    }
 
     private final RowMapper<CommentsEntity> commentRowMapper = (rs, rowNum) -> {
         CommentsEntity commentsEntity = new CommentsEntity();

@@ -13,7 +13,4 @@ public interface CommentService {
     CommentResponse updateComment(Long commentId, CommentUpdateRequest request);
     void deleteComment(Long commentId);
     boolean postExists(Long postId);
-    Long getCommentsCountByPostId(Long postId);
-
-
 }

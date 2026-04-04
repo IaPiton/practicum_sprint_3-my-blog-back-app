@@ -87,15 +87,4 @@ public class CommentController {
         commentService.deleteComment(commentId);
         return ResponseEntity.ok().build();
     }
-
-    @GetMapping("/count")
-    public ResponseEntity<Long> getCommentsCount(@PathVariable("postId") Long postId) {
-
-        if (!commentService.postExists(postId)) {
-            throw new IllegalArgumentException(String.format("Пост с id: %d не найден", postId));
-        }
-
-        return ResponseEntity.ok(commentService.getCommentsCountByPostId(postId));
     }
-
-}
