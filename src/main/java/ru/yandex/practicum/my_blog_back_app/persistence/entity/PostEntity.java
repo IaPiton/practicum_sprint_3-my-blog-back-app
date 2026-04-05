@@ -24,7 +24,7 @@ public class PostEntity {
     private String text;
 
     @Column(name = "likes_count", nullable = false)
-    private Long likesCount;
+    private Long likesCount = 0L;
 
     @Column(name = "image", columnDefinition = "BYTEA")
     private byte[] image;
