@@ -1,6 +1,5 @@
 package ru.yandex.practicum.my_blog_back_app.api.dto.request;
 
-
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -21,5 +20,4 @@ public class PostUpdateRequest {
     private String text;
 
     private List<String> tags = new ArrayList<>();
-
 }

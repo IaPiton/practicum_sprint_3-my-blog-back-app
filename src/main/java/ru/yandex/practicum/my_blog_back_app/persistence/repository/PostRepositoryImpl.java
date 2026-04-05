@@ -44,6 +44,7 @@ public class PostRepositoryImpl implements PostRepository {
         MapSqlParameterSource params = new MapSqlParameterSource();
         params.addValue("title", postEntity.getTitle());
         params.addValue("text", postEntity.getText());
+
         params.addValue("likesCount", postEntity.getLikesCount() != null ? postEntity.getLikesCount() : 0);
         params.addValue("image", postEntity.getImage());
         params.addValue("createAt", now);

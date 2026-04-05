@@ -59,18 +59,18 @@ public class TagRepositoryImpl implements TagRepository {
     @Override
     public List<TagEntity> findTagsByPostId(Long postId) {
         String sql = """
-        SELECT t.id, t.name
-        FROM blog.tags t
-        JOIN blog.post_tags pt ON t.id = pt.tag_id
-        WHERE pt.post_id = :postId
-        ORDER BY t.name
-        """;
+                SELECT t.id, t.name
+                FROM blog.tags t
+                JOIN blog.post_tags pt ON t.id = pt.tag_id
+                WHERE pt.post_id = :postId
+                ORDER BY t.name
+                """;
 
         MapSqlParameterSource params = new MapSqlParameterSource();
         params.addValue("postId", postId);
 
         try {
-              return jdbcTemplate.query(sql, params, tagRowMapper);
+            return jdbcTemplate.query(sql, params, tagRowMapper);
         } catch (DataAccessException e) {
             return Collections.emptyList();
         }
@@ -90,11 +90,11 @@ public class TagRepositoryImpl implements TagRepository {
 
     private TagEntity saveTag(String tag) {
         String sql = """
-        INSERT INTO blog.tags(name)
-        VALUES (:name)
-        ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name
-        RETURNING id;
-        """;
+                INSERT INTO blog.tags(name)
+                VALUES (:name)
+                ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name
+                RETURNING id;
+                """;
 
         MapSqlParameterSource params = new MapSqlParameterSource();
         params.addValue("name", tag);
@@ -109,9 +109,9 @@ public class TagRepositoryImpl implements TagRepository {
 
     private Optional<TagEntity> findTagByName(String tag) {
         String sql = """
-        SELECT * FROM blog.tags t
-        WHERE t.name = :name;
-        """;
+                SELECT * FROM blog.tags t
+                WHERE t.name = :name;
+                """;
 
         MapSqlParameterSource params = new MapSqlParameterSource();
         params.addValue("name", tag);

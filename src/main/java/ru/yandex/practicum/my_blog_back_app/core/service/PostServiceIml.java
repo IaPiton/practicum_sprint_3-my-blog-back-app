@@ -76,7 +76,7 @@ public class PostServiceIml implements PostService {
     }
 
     @Override
-    public PostResponse updatePost(Long id, PostUpdateRequest request) {
+    public PostResponse updatePost(PostUpdateRequest request) {
         PostEntity postEntity = postRepository.findById(request.getId()).orElse(new PostEntity());
 
         postEntity.setTitle(request.getTitle());
@@ -153,14 +153,7 @@ public class PostServiceIml implements PostService {
             truncatedText = truncatedText.substring(0, 128) + "...";
         }
 
-        return PostPreview.builder()
-                .id(post.getId())
-                .title(post.getTitle())
-                .text(truncatedText)
-                .tags(post.getTags().stream().map(TagEntity::getName).toList())
-                .likesCount(post.getLikesCount())
-                .commentsCount(commentRepository.countCommentsByPost(post.getId()))
-                .build();
+        return postMapper.toPreviewResponse(post, truncatedText);
     }
 
 }

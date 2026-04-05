@@ -52,14 +52,9 @@ public class PostController {
 
     @PutMapping("/{id}")
     public ResponseEntity<PostResponse> updatePost(
-            @PathVariable("id") Long postId,
             @Valid @RequestBody PostUpdateRequest request) {
 
-        if (!postId.equals(request.getId())) {
-            throw new IllegalArgumentException("Id поста в запросе отличается от id в теле");
-        }
-
-        return ResponseEntity.ok(postService.updatePost(postId, request));
+        return ResponseEntity.ok(postService.updatePost(request));
     }
 
     @DeleteMapping("/{id}")
@@ -76,7 +71,7 @@ public class PostController {
     @PutMapping(value = "/{id}/image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Void> updatePostImage(
             @PathVariable("id") Long postId,
-            @RequestParam("image")MultipartFile image) {
+            @RequestParam("image") MultipartFile image) {
 
         imageValidator.validate(image);
 
@@ -90,7 +85,7 @@ public class PostController {
 
     @GetMapping(value = "/{id}/image",
             produces = {MediaType.IMAGE_JPEG_VALUE, MediaType.IMAGE_PNG_VALUE,
-                        MediaType.IMAGE_GIF_VALUE, MediaType.APPLICATION_OCTET_STREAM_VALUE})
+                    MediaType.IMAGE_GIF_VALUE, MediaType.APPLICATION_OCTET_STREAM_VALUE})
     public ResponseEntity<byte[]> getPostImage(@PathVariable("id") Long postId) {
         byte[] image = postService.getPostImage(postId);
 

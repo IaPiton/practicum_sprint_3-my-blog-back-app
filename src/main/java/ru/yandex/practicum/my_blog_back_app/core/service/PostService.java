@@ -9,7 +9,7 @@ public interface PostService {
     PostListResponse getPosts(String search, int pageNumber, int pageSize);
     PostResponse getPostById(Long id);
     PostResponse createPost(PostCreateRequest request);
-    PostResponse updatePost(Long id, PostUpdateRequest request);
+    PostResponse updatePost(PostUpdateRequest request);
     void deletePost(Long id);
     Long incrementLikes(Long id);
     void updatePostImage(Long id, byte[] image);

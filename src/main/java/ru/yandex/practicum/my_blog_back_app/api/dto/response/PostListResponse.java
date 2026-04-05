@@ -18,5 +18,4 @@ public class PostListResponse {
     private Boolean hasPrev;
     private Boolean hasNext;
     private Integer lastPage;
-
 }
