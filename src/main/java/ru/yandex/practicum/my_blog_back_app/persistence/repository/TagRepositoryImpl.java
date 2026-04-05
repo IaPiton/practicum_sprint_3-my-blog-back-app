@@ -1,7 +1,6 @@
 package ru.yandex.practicum.my_blog_back_app.persistence.repository;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.dao.DataAccessException;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
@@ -10,7 +9,6 @@ import org.springframework.stereotype.Component;
 import ru.yandex.practicum.my_blog_back_app.persistence.entity.PostEntity;
 import ru.yandex.practicum.my_blog_back_app.persistence.entity.TagEntity;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -69,11 +67,9 @@ public class TagRepositoryImpl implements TagRepository {
         MapSqlParameterSource params = new MapSqlParameterSource();
         params.addValue("postId", postId);
 
-        try {
-            return jdbcTemplate.query(sql, params, tagRowMapper);
-        } catch (DataAccessException e) {
-            return Collections.emptyList();
-        }
+
+        return jdbcTemplate.query(sql, params, tagRowMapper);
+
     }
 
     @Override
