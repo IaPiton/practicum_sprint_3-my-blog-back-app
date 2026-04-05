@@ -1,14 +1,11 @@
 package ru.yandex.practicum.my_blog_back_app.api.dto.response;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
-import java.util.ArrayList;
 import java.util.List;
 
-@Data
+@Getter
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -17,7 +14,7 @@ public class PostResponse {
     private byte[] image;
     private String title;
     private String text;
-    private List<String> tags = new ArrayList<>();
+    private List<String> tags;
     private Long likesCount;
     private Long commentsCount;
 }

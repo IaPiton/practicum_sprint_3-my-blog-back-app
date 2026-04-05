@@ -1,14 +1,16 @@
 package ru.yandex.practicum.my_blog_back_app.api.dto.request;
 
 import jakarta.validation.constraints.NotNull;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.util.ArrayList;
 import java.util.List;
 
-@Data
+@Getter
+@Setter
+@Builder
 @NoArgsConstructor
+@AllArgsConstructor
 public class PostUpdateRequest {
     @NotNull(message = "ID пустой")
     private Long id;

@@ -1,4 +1,13 @@
 package ru.yandex.practicum.my_blog_back_app.api.dto.response;
 
-public record ErrorResponse(String error, String message) {
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.Setter;
+
+@Getter
+@Setter
+@AllArgsConstructor
+public class ErrorResponse {
+    private String error;
+    private String message;
 }

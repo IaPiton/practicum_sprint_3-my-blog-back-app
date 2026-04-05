@@ -1,12 +1,14 @@
 package ru.yandex.practicum.my_blog_back_app.api.dto.response;
 
-import lombok.Builder;
-import lombok.Data;
+import lombok.*;
 
 import java.util.List;
 
-@Data
+@Setter
+@Getter
 @Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class PostPreview {
     private Long id;
     private String title;
