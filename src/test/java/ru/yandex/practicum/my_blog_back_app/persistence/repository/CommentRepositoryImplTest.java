@@ -4,83 +4,23 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
-import org.springframework.jdbc.datasource.DataSourceTransactionManager;
-import org.springframework.jdbc.datasource.DriverManagerDataSource;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
-import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
-import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.support.TransactionTemplate;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
+import ru.yandex.practicum.my_blog_back_app.configuration.TestCommonConfiguration;
 import ru.yandex.practicum.my_blog_back_app.persistence.entity.CommentsEntity;
 
-import javax.sql.DataSource;
 import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-@SpringJUnitConfig
-@Testcontainers
+@ActiveProfiles("test")
 @DisplayName("Тесты репозитория комментариев")
-class CommentRepositoryImplTest {
-
-    @Container
-    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:17.5")
-            .withDatabaseName("testdb")
-            .withUsername("test")
-            .withPassword("test")
-            .withInitScript("init.sql");
-
-    @DynamicPropertySource
-    static void configureProperties(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", postgres::getJdbcUrl);
-        registry.add("spring.datasource.username", postgres::getUsername);
-        registry.add("spring.datasource.password", postgres::getPassword);
-        registry.add("spring.datasource.driver-class-name", postgres::getDriverClassName);
-    }
-
-    @Configuration
-    static class TestConfig {
-
-        @Bean
-        public DataSource dataSourceTest() {
-            DriverManagerDataSource dataSource = new DriverManagerDataSource();
-            dataSource.setDriverClassName(postgres.getDriverClassName());
-            dataSource.setUrl(postgres.getJdbcUrl());
-            dataSource.setUsername(postgres.getUsername());
-            dataSource.setPassword(postgres.getPassword());
-            return dataSource;
-        }
-
-        @Bean
-        public NamedParameterJdbcTemplate namedParameterJdbcTemplateTest(DataSource dataSource) {
-            return new NamedParameterJdbcTemplate(dataSource);
-        }
-
-        @Bean
-        public PlatformTransactionManager transactionManager(DataSource dataSource) {
-            return new DataSourceTransactionManager(dataSource);
-        }
-
-        @Bean
-        public TransactionTemplate transactionTemplate(PlatformTransactionManager transactionManager) {
-            return new TransactionTemplate(transactionManager);
-        }
-
-        @Bean
-        public CommentRepository commentRepository(NamedParameterJdbcTemplate jdbcTemplate) {
-            return new CommentRepositoryImpl(jdbcTemplate);
-        }
-    }
+class CommentRepositoryImplTest extends TestCommonConfiguration {
 
     @Autowired
     private CommentRepository commentRepository;

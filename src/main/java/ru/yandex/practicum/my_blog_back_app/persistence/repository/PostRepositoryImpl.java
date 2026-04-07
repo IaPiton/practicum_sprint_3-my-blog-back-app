@@ -16,7 +16,7 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class PostRepositoryImpl implements PostRepository {
     private final NamedParameterJdbcTemplate jdbcTemplate;
-    private final TagRepository tagRepository;
+    private final TagRepositoryImpl tagRepository;
 
 
     private final RowMapper<PostEntity> postRowMapper = (rs, rowNum) -> {

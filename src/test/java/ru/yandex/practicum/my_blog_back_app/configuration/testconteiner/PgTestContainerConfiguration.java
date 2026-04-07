@@ -1,0 +1,65 @@
+package ru.yandex.practicum.my_blog_back_app.configuration.testconteiner;
+
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
+import org.springframework.context.annotation.Profile;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.jdbc.datasource.DataSourceTransactionManager;
+import org.springframework.jdbc.datasource.DriverManagerDataSource;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
+import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.utility.DockerImageName;
+
+import javax.sql.DataSource;
+
+@Configuration
+@Profile("test")
+public class PgTestContainerConfiguration {
+
+    private static final PostgreSQLContainer<?> POSTGRES_CONTAINER;
+
+    static {
+        POSTGRES_CONTAINER = new PostgreSQLContainer<>(DockerImageName.parse("postgres:15-alpine"))
+                .withDatabaseName("testdb")
+                .withUsername("test")
+                .withPassword("test")
+                .withInitScript("init.sql");
+
+        POSTGRES_CONTAINER.start();
+
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            if (POSTGRES_CONTAINER.isRunning()) {
+                POSTGRES_CONTAINER.stop();
+            }
+        }));
+    }
+
+    @Bean
+    @Primary
+    public DataSource dataSource() {
+        DriverManagerDataSource dataSource = new DriverManagerDataSource();
+        dataSource.setDriverClassName(POSTGRES_CONTAINER.getDriverClassName());
+        dataSource.setUrl(POSTGRES_CONTAINER.getJdbcUrl());
+        dataSource.setUsername(POSTGRES_CONTAINER.getUsername());
+        dataSource.setPassword(POSTGRES_CONTAINER.getPassword());
+        return dataSource;
+    }
+
+    @Bean
+    public NamedParameterJdbcTemplate namedParameterJdbcTemplate(DataSource dataSource) {
+        return new NamedParameterJdbcTemplate(dataSource);
+    }
+
+    @Bean
+    public PlatformTransactionManager transactionManager(DataSource dataSource) {
+        return new DataSourceTransactionManager(dataSource);
+    }
+
+    @Bean
+    public TransactionTemplate transactionTemplate(PlatformTransactionManager transactionManager) {
+        return new TransactionTemplate(transactionManager);
+    }
+}
