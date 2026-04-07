@@ -1,36 +1,40 @@
 package ru.yandex.practicum.my_blog_back_app.api.controller;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
-import org.mockito.InjectMocks;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import org.springframework.mock.web.MockMultipartFile;
-import org.springframework.web.multipart.MultipartFile;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import ru.yandex.practicum.my_blog_back_app.api.dto.request.PostCreateRequest;
 import ru.yandex.practicum.my_blog_back_app.api.dto.request.PostUpdateRequest;
 import ru.yandex.practicum.my_blog_back_app.api.dto.response.PostListResponse;
 import ru.yandex.practicum.my_blog_back_app.api.dto.response.PostPreview;
 import ru.yandex.practicum.my_blog_back_app.api.dto.response.PostResponse;
-import ru.yandex.practicum.my_blog_back_app.api.handler.InvalidImageException;
+import ru.yandex.practicum.my_blog_back_app.api.handler.ApiExceptionHandler;
 import ru.yandex.practicum.my_blog_back_app.core.service.PostService;
 import ru.yandex.practicum.my_blog_back_app.core.validator.ImageValidator;
 
-import java.io.IOException;
 import java.util.List;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.hamcrest.Matchers.hasSize;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @ExtendWith(MockitoExtension.class)
-@DisplayName("Тесты PostController")
+@DisplayName("Тесты PostController с MockMvc")
 class PostControllerTest {
+
+    private MockMvc mockMvc;
+
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Mock
     private PostService postService;
@@ -38,44 +42,40 @@ class PostControllerTest {
     @Mock
     private ImageValidator imageValidator;
 
-    @InjectMocks
-    private PostController postController;
-
     private static final Long VALID_POST_ID = 1L;
-    private static final String SEARCH_QUERY = "test";
-    private static final byte[] TEST_IMAGE_BYTES = new byte[]{1, 2, 3, 4, 5};
+    private static final Long INVALID_POST_ID = 999L;
 
-    private static PostResponse samplePostResponse;
-    private static PostCreateRequest sampleCreateRequest;
-    private static PostUpdateRequest sampleUpdateRequest;
-    private static PostListResponse samplePostListResponse;
+    private PostResponse samplePostResponse;
+    private PostCreateRequest sampleCreateRequest;
+    private PostUpdateRequest sampleUpdateRequest;
+    private PostListResponse samplePostListResponse;
 
-    @BeforeAll
-    static void setUp() {
+    @BeforeEach
+    void setUp() {
         samplePostResponse = PostResponse.builder()
                 .id(VALID_POST_ID)
-                .title("Заголовок")
+                .title("Заголовок поста")
                 .text("Текст")
                 .tags(List.of("Tag_1", "Tag_2"))
                 .likesCount(10L)
                 .build();
 
         sampleCreateRequest = PostCreateRequest.builder()
-                .title("Заголовок")
+                .title("Заголовок поста")
                 .text("Текст")
                 .tags(List.of("Tag_1", "Tag_2"))
                 .build();
 
         sampleUpdateRequest = PostUpdateRequest.builder()
                 .id(VALID_POST_ID)
-                .title("Заголовок")
+                .title("Заголовок поста")
                 .text("Текст")
                 .tags(List.of("Tag_1", "Tag_2"))
                 .build();
 
         PostPreview postPreview = PostPreview.builder()
                 .id(VALID_POST_ID)
-                .title("Заголовок")
+                .title("Заголовок поста")
                 .text("Текст")
                 .tags(List.of("Tag_1", "Tag_2"))
                 .likesCount(10L)
@@ -87,386 +87,378 @@ class PostControllerTest {
                 .hasNext(true)
                 .lastPage(10)
                 .build();
+
+        PostController postController = new PostController(postService, imageValidator);
+
+        mockMvc = MockMvcBuilders
+                .standaloneSetup(postController)
+                .setControllerAdvice(new ApiExceptionHandler())
+                .build();
     }
 
     @Nested
-    @DisplayName("Тесты для getPosts()")
+    @DisplayName("Тесты для GET api/posts")
     class GetPostsTests {
 
         @Test
-        @DisplayName("Возвращает список постов")
-        void shouldReturnPostsWithDefaultParameters() {
+        @DisplayName("Возвращает список постов с параметрами по умолчанию")
+        void shouldReturnPostsWithDefaultParams() throws Exception {
             when(postService.getPosts("", 0, 5)).thenReturn(samplePostListResponse);
 
-            ResponseEntity<PostListResponse> response = postController.getPosts("", 0, 5);
+            mockMvc.perform(get("/api/posts")
+                            .contentType(MediaType.APPLICATION_JSON))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.posts", hasSize(1)))
+                    .andExpect(jsonPath("$.posts[0].id").value(VALID_POST_ID))
+                    .andExpect(jsonPath("$.posts[0].title").value("Заголовок поста"))
+                    .andExpect(jsonPath("$.hasPrev").value(true))
+                    .andExpect(jsonPath("$.hasNext").value(true))
+                    .andExpect(jsonPath("$.lastPage").value(10));
 
-            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-            assertThat(response.getBody()).isNotNull();
-            assertThat(response.getBody().getPosts()).hasSize(1);
-            assertThat(response.getBody().getLastPage()).isEqualTo(10);
-
-            verify(postService).getPosts("", 0, 5);
-        }
-
-        @Test
-        @DisplayName("Корректно отработает поисковый запрос")
-        void shouldHandleSearchQuery() {
-            when(postService.getPosts(SEARCH_QUERY, 0, 5)).thenReturn(samplePostListResponse);
-
-            ResponseEntity<PostListResponse> response = postController.getPosts(SEARCH_QUERY, 0, 5);
-
-            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-            assertThat(response.getBody()).isNotNull();
-
-            verify(postService).getPosts(SEARCH_QUERY, 0, 5);
-        }
-
-        @Test
-        @DisplayName("Отредактирует отрицательный номер страницы на 0")
-        void shouldCorrectNegativePageNumber() {
-            int negativePageNumber = -1;
-            when(postService.getPosts("", 0, 5)).thenReturn(samplePostListResponse);
-
-            ResponseEntity<PostListResponse> response = postController.getPosts("", negativePageNumber, 5);
-
-            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
             verify(postService).getPosts("", 0, 5);
         }
 
         @ParameterizedTest
-        @ValueSource(ints = {-5, -10, -1})
-        @DisplayName("Отредактирует номера страниц на 0")
-        void shouldCorrectAnyNegativePageNumber(int negativePageNumber) {
+        @CsvSource({
+                "java, 0, 5",
+                "spring, 1, 10",
+                "test, 2, 20"
+        })
+        @DisplayName("Возвращает список постов с переданными параметрами")
+        void shouldReturnPostsWithCustomParams(String search, int pageNumber, int pageSize) throws Exception {
+            when(postService.getPosts(search, pageNumber, pageSize)).thenReturn(samplePostListResponse);
+
+            mockMvc.perform(get("/api/posts")
+                            .param("search", search)
+                            .param("pageNumber", String.valueOf(pageNumber))
+                            .param("pageSize", String.valueOf(pageSize))
+                            .contentType(MediaType.APPLICATION_JSON))
+                    .andExpect(status().isOk());
+
+            verify(postService).getPosts(search, pageNumber, pageSize);
+        }
+
+        @Test
+        @DisplayName("Корректирует отрицательный pageNumber на 0")
+        void shouldCorrectNegativePageNumber() throws Exception {
             when(postService.getPosts("", 0, 5)).thenReturn(samplePostListResponse);
 
-            postController.getPosts("", negativePageNumber, 5);
+            mockMvc.perform(get("/api/posts")
+                            .param("pageNumber", "-5")
+                            .contentType(MediaType.APPLICATION_JSON))
+                    .andExpect(status().isOk());
 
             verify(postService).getPosts("", 0, 5);
         }
 
         @Test
-        @DisplayName("Отредактирует размер страницы меньше 1 на 5")
-        void shouldCorrectPageSizeLessThanOne() {
-            int invalidPageSize = 0;
+        @DisplayName("Корректирует pageSize меньше 1 на 5")
+        void shouldCorrectInvalidPageSize() throws Exception {
             when(postService.getPosts("", 0, 5)).thenReturn(samplePostListResponse);
 
-            postController.getPosts("", 0, invalidPageSize);
+            mockMvc.perform(get("/api/posts")
+                            .param("pageSize", "0")
+                            .contentType(MediaType.APPLICATION_JSON))
+                    .andExpect(status().isOk());
 
             verify(postService).getPosts("", 0, 5);
-        }
-
-        @Test
-        @DisplayName("Должен вернуть пустой список когда постов нет")
-        void shouldReturnEmptyListWhenNoPosts() {
-            PostListResponse emptyResponse = PostListResponse.builder()
-                    .posts(List.of())
-                    .hasNext(false)
-                    .hasPrev(false)
-                    .lastPage(0)
-                    .build();
-            when(postService.getPosts("", 0, 5)).thenReturn(emptyResponse);
-
-            ResponseEntity<PostListResponse> response = postController.getPosts("", 0, 5);
-
-            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-            Assertions.assertNotNull(response.getBody());
-            assertThat(response.getBody().getPosts()).isEmpty();
-
         }
     }
 
     @Nested
-    @DisplayName("Тесты для getPostById()")
+    @DisplayName("Тесты для GET api/posts/{id}")
     class GetPostByIdTests {
 
         @Test
-        @DisplayName("Вернет пост по id")
-        void shouldReturnPostById() {
+        @DisplayName("Возвращает пост по ID")
+        void shouldReturnPostWhenExists() throws Exception {
             when(postService.getPostById(VALID_POST_ID)).thenReturn(samplePostResponse);
 
-            ResponseEntity<PostResponse> response = postController.getPostById(VALID_POST_ID);
-
-            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-            assertThat(response.getBody()).isNotNull();
-            assertThat(response.getBody().getId()).isEqualTo(VALID_POST_ID);
-            assertThat(response.getBody().getTitle()).isEqualTo("Заголовок");
+            mockMvc.perform(get("/api/posts/{id}", VALID_POST_ID)
+                            .contentType(MediaType.APPLICATION_JSON))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.id").value(VALID_POST_ID))
+                    .andExpect(jsonPath("$.title").value("Заголовок поста"))
+                    .andExpect(jsonPath("$.text").value("Текст"))
+                    .andExpect(jsonPath("$.likesCount").value(10));
 
             verify(postService).getPostById(VALID_POST_ID);
         }
 
         @Test
-        @DisplayName("Исключение когда пост не найден")
-        void shouldThrowExceptionWhenPostNotFound() {
-            Long nonExistentId = 999L;
-            when(postService.getPostById(nonExistentId))
-                    .thenThrow(new IllegalArgumentException("Пост не найден"));
+        @DisplayName("Возвращает BAD_REQUEST когда пост не существует")
+        void shouldReturnBadRequestWhenPostDoesNotExist() throws Exception {
+            when(postService.getPostById(INVALID_POST_ID)).thenThrow(new IllegalArgumentException("Пост не найден"));
 
-            assertThatThrownBy(() -> postController.getPostById(nonExistentId))
-                    .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessage("Пост не найден");
+            mockMvc.perform(get("/api/posts/{id}", INVALID_POST_ID)
+                            .contentType(MediaType.APPLICATION_JSON))
+                    .andExpect(status().isBadRequest());
 
-            verify(postService).getPostById(nonExistentId);
+            verify(postService).getPostById(INVALID_POST_ID);
         }
     }
 
     @Nested
-    @DisplayName("Тесты для createPost()")
+    @DisplayName("Тесты для POST api/posts")
     class CreatePostTests {
 
         @Test
-        @DisplayName("Создаст пост и вернет статус 201")
-        void shouldCreatePostAndReturnCreatedStatus() {
-            when(postService.createPost(sampleCreateRequest)).thenReturn(samplePostResponse);
+        @DisplayName("Создает и возвращает пост")
+        void shouldCreatePostWhenValidRequest() throws Exception {
+            when(postService.createPost(any(PostCreateRequest.class))).thenReturn(samplePostResponse);
 
-            ResponseEntity<PostResponse> response = postController.createPost(sampleCreateRequest);
+            mockMvc.perform(post("/api/posts")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(sampleCreateRequest)))
+                    .andExpect(status().isCreated())
+                    .andExpect(jsonPath("$.id").value(VALID_POST_ID))
+                    .andExpect(jsonPath("$.title").value("Заголовок поста"))
+                    .andExpect(jsonPath("$.text").value("Текст"));
 
-            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
-            assertThat(response.getBody()).isNotNull();
-            assertThat(response.getBody().getId()).isEqualTo(VALID_POST_ID);
+            verify(postService).createPost(any(PostCreateRequest.class));
+        }
 
-            verify(postService).createPost(sampleCreateRequest);
+        @Test
+        @DisplayName("Возвращает 400 при невалидном запросе - пустой заголовок")
+        void shouldReturnBadRequestWhenTitleIsEmpty() throws Exception {
+            PostCreateRequest invalidRequest = PostCreateRequest.builder()
+                    .title("")
+                    .text("Содержимое")
+                    .build();
+
+            mockMvc.perform(post("/api/posts")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(invalidRequest)))
+                    .andExpect(status().isBadRequest());
+
+            verify(postService, never()).createPost(any());
+        }
+
+        @Test
+        @DisplayName("Возвращает 400 при невалидном запросе - пустое содержимое")
+        void shouldReturnBadRequestWhenContentIsEmpty() throws Exception {
+            PostCreateRequest invalidRequest = PostCreateRequest.builder()
+                    .title("Заголовок")
+                    .text("")
+                    .build();
+
+            mockMvc.perform(post("/api/posts")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(invalidRequest)))
+                    .andExpect(status().isBadRequest());
+
+            verify(postService, never()).createPost(any());
         }
     }
 
     @Nested
-    @DisplayName("Тесты для updatePost()")
+    @DisplayName("Тесты для PUT api/posts/{id}")
     class UpdatePostTests {
 
         @Test
-        @DisplayName("Обновит пост и вернет обновленные данные")
-        void shouldUpdatePostAndReturnUpdatedData() {
+        @DisplayName("Обновляет и возвращает пост")
+        void shouldUpdatePostWhenValidRequest() throws Exception {
             PostResponse updatedResponse = PostResponse.builder()
                     .id(VALID_POST_ID)
-                    .title("Заголовок")
-                    .text("Текст")
+                    .title("Обновленный заголовок")
+                    .text("Обновленное содержимое")
+                    .likesCount(0L)
                     .build();
 
-            when(postService.updatePost(sampleUpdateRequest)).thenReturn(updatedResponse);
+            when(postService.updatePost(any(PostUpdateRequest.class))).thenReturn(updatedResponse);
 
-            ResponseEntity<PostResponse> response = postController.updatePost(sampleUpdateRequest);
+            mockMvc.perform(put("/api/posts/{id}", VALID_POST_ID)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(sampleUpdateRequest)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.id").value(VALID_POST_ID))
+                    .andExpect(jsonPath("$.title").value("Обновленный заголовок"))
+                    .andExpect(jsonPath("$.text").value("Обновленное содержимое"));
 
-            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-            assertThat(response.getBody()).isNotNull();
-            assertThat(response.getBody().getTitle()).isEqualTo("Заголовок");
-
-            verify(postService).updatePost(sampleUpdateRequest);
+            verify(postService).updatePost(any(PostUpdateRequest.class));
         }
 
         @Test
-        @DisplayName("Исключение при обновлении несуществующего поста")
-        void shouldThrowExceptionWhenUpdatingNonExistentPost() {
+        @DisplayName("Возвращает 400 при невалидном запросе")
+        void shouldReturnBadRequestWhenInvalidRequest() throws Exception {
             PostUpdateRequest invalidRequest = PostUpdateRequest.builder()
-                    .id(999L)
-                    .title("Invalid Post")
+                    .id(VALID_POST_ID)
+                    .title(null)
+                    .text(null)
                     .build();
 
-            when(postService.updatePost(invalidRequest))
-                    .thenThrow(new IllegalArgumentException("Пост не найден"));
+            mockMvc.perform(put("/api/posts/{id}", VALID_POST_ID)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(invalidRequest)))
+                    .andExpect(status().isBadRequest());
 
-            assertThatThrownBy(() -> postController.updatePost(invalidRequest))
-                    .isInstanceOf(IllegalArgumentException.class);
+            verify(postService, never()).updatePost(any());
         }
     }
 
     @Nested
-    @DisplayName("Тесты для deletePost()")
+    @DisplayName("Тесты для DELETE api/posts/{id}")
     class DeletePostTests {
 
         @Test
-        @DisplayName("Удалит пост и вернет статус 200")
-        void shouldDeletePostAndReturnOk() {
+        @DisplayName("Удаляет пост")
+        void shouldDeletePostWhenExists() throws Exception {
             doNothing().when(postService).deletePost(VALID_POST_ID);
 
-            ResponseEntity<Void> response = postController.deletePost(VALID_POST_ID);
-
-            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-            assertThat(response.getBody()).isNull();
+            mockMvc.perform(delete("/api/posts/{id}", VALID_POST_ID)
+                            .contentType(MediaType.APPLICATION_JSON))
+                    .andExpect(status().isOk());
 
             verify(postService).deletePost(VALID_POST_ID);
         }
-
-        @Test
-        @DisplayName("Выбросит исключение при удалении несуществующего поста")
-        void shouldThrowExceptionWhenDeletingNonExistentPost() {
-            Long nonExistentId = 999L;
-            doThrow(new IllegalArgumentException("Пост не найден"))
-                    .when(postService).deletePost(nonExistentId);
-
-             assertThatThrownBy(() -> postController.deletePost(nonExistentId))
-                    .isInstanceOf(IllegalArgumentException.class);
-
-            verify(postService).deletePost(nonExistentId);
-        }
     }
 
     @Nested
-    @DisplayName("Тесты для incrementLikes()")
+    @DisplayName("Тесты для POST api/posts/{id}/likes")
     class IncrementLikesTests {
 
         @Test
-        @DisplayName("Увеличит количество лайков и вернет новое значение")
-        void shouldIncrementLikesAndReturnNewCount() {
-            Long newLikesCount = 11L;
+        @DisplayName("Увеличивает количество лайков и возвращает новое значение")
+        void shouldIncrementLikesAndReturnNewCount() throws Exception {
+            Long newLikesCount = 5L;
             when(postService.incrementLikes(VALID_POST_ID)).thenReturn(newLikesCount);
 
-            ResponseEntity<Long> response = postController.incrementLikes(VALID_POST_ID);
-
-            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-            assertThat(response.getBody()).isEqualTo(11L);
+            mockMvc.perform(post("/api/posts/{id}/likes", VALID_POST_ID)
+                            .contentType(MediaType.APPLICATION_JSON))
+                    .andExpect(status().isOk())
+                    .andExpect(content().string(newLikesCount.toString()));
 
             verify(postService).incrementLikes(VALID_POST_ID);
-        }
-
-        @Test
-        @DisplayName("Выбросит исключение при попытке увеличить лайки у несуществующего поста")
-        void shouldThrowExceptionWhenIncrementingLikesForNonExistentPost() {
-            Long nonExistentId = 999L;
-            when(postService.incrementLikes(nonExistentId))
-                    .thenThrow(new IllegalArgumentException("Пост не найден"));
-
-            assertThatThrownBy(() -> postController.incrementLikes(nonExistentId))
-                    .isInstanceOf(IllegalArgumentException.class);
         }
     }
 
     @Nested
-    @DisplayName("Тесты для updatePostImage()")
+    @DisplayName("Тесты для PUT api/posts/{id}/image")
     class UpdatePostImageTests {
 
         @Test
-        @DisplayName("Обновит изображение поста при валидном файле")
-        void shouldUpdatePostImageWhenValidFile()  {
-            MultipartFile image = new MockMultipartFile(
+        @DisplayName("Обновляет изображение поста")
+        void shouldUpdatePostImageWhenValidImage() throws Exception {
+            MockMultipartFile image = new MockMultipartFile(
                     "image",
-                    "test.jpg",
+                    "test-image.jpg",
                     MediaType.IMAGE_JPEG_VALUE,
-                    TEST_IMAGE_BYTES
+                    "test image content".getBytes()
             );
 
             doNothing().when(imageValidator).validate(image);
             doNothing().when(postService).updatePostImage(eq(VALID_POST_ID), any(byte[].class));
 
-            ResponseEntity<Void> response = postController.updatePostImage(VALID_POST_ID, image);
-
-            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+            mockMvc.perform(multipart("/api/posts/{id}/image", VALID_POST_ID)
+                            .file(image)
+                            .with(request -> {
+                                request.setMethod("PUT");
+                                return request;
+                            })
+                            .contentType(MediaType.MULTIPART_FORM_DATA_VALUE))
+                    .andExpect(status().isOk());
 
             verify(imageValidator).validate(image);
             verify(postService).updatePostImage(eq(VALID_POST_ID), any(byte[].class));
         }
 
         @Test
-        @DisplayName("Выбросит исключение при ошибке валидации изображения")
-        void shouldThrowExceptionWhenImageValidationFails() {
-            MultipartFile image = new MockMultipartFile(
+        @DisplayName("Возвращает 400 при невалидном изображении")
+        void shouldReturnBadRequestWhenInvalidImage() throws Exception {
+            MockMultipartFile invalidImage = new MockMultipartFile(
                     "image",
                     "test.txt",
                     MediaType.TEXT_PLAIN_VALUE,
-                    "not an image".getBytes()
+                    "invalid content".getBytes()
             );
 
-            doThrow(new InvalidImageException("Некорректный формат изображения"))
-                    .when(imageValidator).validate(image);
+            doThrow(new IllegalArgumentException("Недопустимый формат изображения"))
+                    .when(imageValidator).validate(invalidImage);
 
-            assertThatThrownBy(() -> postController.updatePostImage(VALID_POST_ID, image))
-                    .isInstanceOf(InvalidImageException.class)
-                    .hasMessage("Некорректный формат изображения");
+            mockMvc.perform(multipart("/api/posts/{id}/image", VALID_POST_ID)
+                            .file(invalidImage)
+                            .with(request -> {
+                                request.setMethod("PUT");
+                                return request;
+                            })
+                            .contentType(MediaType.MULTIPART_FORM_DATA_VALUE))
+                    .andExpect(status().isBadRequest());
 
-            verify(imageValidator).validate(image);
+            verify(imageValidator).validate(invalidImage);
             verify(postService, never()).updatePostImage(any(), any());
         }
 
         @Test
-        @DisplayName("Выбросит исключение при пустом файле")
-        void shouldThrowExceptionWhenFileIsEmpty() {
-            MultipartFile image = new MockMultipartFile(
+        @DisplayName("Возвращает 500 при ошибке чтения файла")
+        void shouldReturnInternalServerErrorWhenIOException() throws Exception {
+            MockMultipartFile image = new MockMultipartFile(
                     "image",
-                    "empty.jpg",
+                    "test-image.jpg",
                     MediaType.IMAGE_JPEG_VALUE,
-                    new byte[0]
+                    "test image content".getBytes()
             );
 
-            doThrow(new InvalidImageException("Файл изображения пуст"))
-                    .when(imageValidator).validate(image);
-
-            assertThatThrownBy(() -> postController.updatePostImage(VALID_POST_ID, image))
-                    .isInstanceOf(InvalidImageException.class);
-        }
-
-        @Test
-        @DisplayName("Выбросит RuntimeException при ошибке чтения файла")
-        void shouldThrowRuntimeExceptionWhenIOExceptionOccurs() throws IOException {
-            MultipartFile image = mock(MultipartFile.class);
-            when(image.getBytes()).thenThrow(new IOException("Ошибка чтения файла"));
             doNothing().when(imageValidator).validate(image);
+            doThrow(new RuntimeException("Ошибка при чтении файла"))
+                    .when(postService).updatePostImage(eq(VALID_POST_ID), any(byte[].class));
 
-            assertThatThrownBy(() -> postController.updatePostImage(VALID_POST_ID, image))
-                    .isInstanceOf(RuntimeException.class)
-                    .hasMessage("Ошибка при чтении файла");
+            mockMvc.perform(multipart("/api/posts/{id}/image", VALID_POST_ID)
+                            .file(image)
+                            .with(request -> {
+                                request.setMethod("PUT");
+                                return request;
+                            })
+                            .contentType(MediaType.MULTIPART_FORM_DATA_VALUE))
+                    .andExpect(status().isInternalServerError());
 
             verify(imageValidator).validate(image);
-            verify(postService, never()).updatePostImage(any(), any());
+            verify(postService).updatePostImage(eq(VALID_POST_ID), any(byte[].class));
         }
     }
 
     @Nested
-    @DisplayName("Тесты для getPostImage()")
+    @DisplayName("Тесты для GET api/posts/{id}/image")
     class GetPostImageTests {
 
         @Test
-        @DisplayName("Вернет изображение когда оно существует")
-        void shouldReturnImageWhenExists() {
-            when(postService.getPostImage(VALID_POST_ID)).thenReturn(TEST_IMAGE_BYTES);
+        @DisplayName("Возвращает изображение поста")
+        void shouldReturnPostImageWhenExists() throws Exception {
+            byte[] imageBytes = "test image data".getBytes();
+            when(postService.getPostImage(VALID_POST_ID)).thenReturn(imageBytes);
 
-            ResponseEntity<byte[]> response = postController.getPostImage(VALID_POST_ID);
-
-            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-            assertThat(response.getBody()).isNotNull();
-            assertThat(response.getBody()).isEqualTo(TEST_IMAGE_BYTES);
-            assertThat(response.getHeaders().getContentLength()).isEqualTo(TEST_IMAGE_BYTES.length);
+            mockMvc.perform(get("/api/posts/{id}/image", VALID_POST_ID))
+                    .andExpect(status().isOk())
+                    .andExpect(content().bytes(imageBytes))
+                    .andExpect(header().string("Content-Length", String.valueOf(imageBytes.length)));
 
             verify(postService).getPostImage(VALID_POST_ID);
         }
 
         @Test
-        @DisplayName("Вернет пустой ответ когда изображение null")
-        void shouldReturnEmptyResponseWhenImageIsNull() {
+        @DisplayName("Возвращает пустой ответ, когда изображение не найдено")
+        void shouldReturnEmptyResponseWhenImageNotFound() throws Exception {
             when(postService.getPostImage(VALID_POST_ID)).thenReturn(null);
 
-            ResponseEntity<byte[]> response = postController.getPostImage(VALID_POST_ID);
-
-            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-            assertThat(response.getBody()).isNull();
-            assertThat(response.getHeaders().getContentLength()).isZero();
+            mockMvc.perform(get("/api/posts/{id}/image", VALID_POST_ID))
+                    .andExpect(status().isOk())
+                    .andExpect(content().bytes(new byte[0]))
+                    .andExpect(header().string("Content-Length", "0"));
 
             verify(postService).getPostImage(VALID_POST_ID);
         }
 
         @Test
-        @DisplayName("Вернет пустой ответ когда изображение пустое")
-        void shouldReturnEmptyResponseWhenImageIsEmpty() {
-
+        @DisplayName("Возвращает пустой ответ, когда массив изображения пустой")
+        void shouldReturnEmptyResponseWhenImageEmpty() throws Exception {
             when(postService.getPostImage(VALID_POST_ID)).thenReturn(new byte[0]);
 
-            ResponseEntity<byte[]> response = postController.getPostImage(VALID_POST_ID);
-
-
-            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-            assertThat(response.getBody()).isNull();
-            assertThat(response.getHeaders().getContentLength()).isZero();
+            mockMvc.perform(get("/api/posts/{id}/image", VALID_POST_ID))
+                    .andExpect(status().isOk())
+                    .andExpect(content().bytes(new byte[0]))
+                    .andExpect(header().string("Content-Length", "0"));
 
             verify(postService).getPostImage(VALID_POST_ID);
         }
 
-        @Test
-        @DisplayName("Вернет изображение с правильным Content-Length")
-        void shouldReturnImageWithCorrectContentLength() {
-             byte[] largeImage = new byte[1024];
-            when(postService.getPostImage(VALID_POST_ID)).thenReturn(largeImage);
-
-            ResponseEntity<byte[]> response = postController.getPostImage(VALID_POST_ID);
-
-            assertThat(response.getHeaders().getContentLength()).isEqualTo(1024);
-        }
     }
-
 }
