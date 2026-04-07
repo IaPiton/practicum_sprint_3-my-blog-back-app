@@ -1,6 +1,7 @@
 package ru.yandex.practicum.my_blog_back_app.api.controller;
 
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -14,15 +15,11 @@ import java.util.Collections;
 import java.util.List;
 
 @RestController
+@RequiredArgsConstructor
 @RequestMapping("api/posts/{postId}/comments")
 public class CommentController {
 
     private final CommentService commentService;
-
-    @Autowired
-    public CommentController(CommentService commentService) {
-        this.commentService = commentService;
-    }
 
     @GetMapping
     public ResponseEntity<List<CommentResponse>> getCommentsByPostId(@PathVariable("postId") String postId) {

@@ -1,5 +1,6 @@
 package ru.yandex.practicum.my_blog_back_app.persistence.repository;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.RowMapper;
@@ -13,13 +14,10 @@ import java.util.List;
 import java.util.Optional;
 
 @Component
+@RequiredArgsConstructor
 public class TagRepositoryImpl implements TagRepository {
     private final NamedParameterJdbcTemplate jdbcTemplate;
 
-    @Autowired
-    public TagRepositoryImpl(NamedParameterJdbcTemplate jdbcTemplate) {
-        this.jdbcTemplate = jdbcTemplate;
-    }
 
     private final RowMapper<TagEntity> tagRowMapper = (rs, rowNum) -> {
         TagEntity tagEntity = new TagEntity();
