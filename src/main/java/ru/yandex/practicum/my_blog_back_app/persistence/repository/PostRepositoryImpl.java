@@ -1,10 +1,7 @@
 package ru.yandex.practicum.my_blog_back_app.persistence.repository;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.dao.EmptyResultDataAccessException;
-import org.springframework.jdbc.core.RowMapper;
-import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
-import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Component;
 import ru.yandex.practicum.my_blog_back_app.persistence.entity.PostEntity;
 
@@ -15,124 +12,112 @@ import java.util.Optional;
 @Component
 @RequiredArgsConstructor
 public class PostRepositoryImpl implements PostRepository {
-    private final NamedParameterJdbcTemplate jdbcTemplate;
-    private final TagRepositoryImpl tagRepository;
-
-
-    private final RowMapper<PostEntity> postRowMapper = (rs, rowNum) -> {
-        PostEntity post = new PostEntity();
-        post.setId(rs.getLong("id"));
-        post.setTitle(rs.getString("title"));
-        post.setText(rs.getString("text"));
-        post.setLikesCount(rs.getLong("likes_count"));
-        post.setImage(rs.getBytes("image"));
-        post.setCreateAt(rs.getTimestamp("create_at").toLocalDateTime());
-        post.setUpdateAt(rs.getTimestamp("update_at").toLocalDateTime());
-        return post;
-    };
+    private final JdbcClient jdbcClient;
 
     @Override
     public PostEntity savePost(PostEntity postEntity) {
         String postSql = """
                 INSERT INTO blog.posts(title, text, likes_count, image, create_at, update_at)
-                VALUES (:title, :text, :likesCount, :image, :createAt,  :updateAt)
-                RETURNING id;
+                 VALUES (:title, :text, :likesCount, :image, :createAt, :updateAt)
+                 RETURNING id, title, text, likes_count, image, create_at, update_at;
                 """;
 
         LocalDateTime now = LocalDateTime.now();
 
-        MapSqlParameterSource params = new MapSqlParameterSource();
-        params.addValue("title", postEntity.getTitle());
-        params.addValue("text", postEntity.getText());
-
-        params.addValue("likesCount", postEntity.getLikesCount() != null ? postEntity.getLikesCount() : 0);
-        params.addValue("image", postEntity.getImage());
-        params.addValue("createAt", now);
-        params.addValue("updateAt", now);
-
-        Long postId = jdbcTemplate.queryForObject(postSql, params, Long.class);
-
-        postEntity.setId(postId);
-        postEntity.setCreateAt(now);
-        postEntity.setUpdateAt(now);
-
-        if (postEntity.getTags() != null && !postEntity.getTags().isEmpty()) {
-            tagRepository.saveTagsAndPost(postEntity);
-        }
-
-        return postEntity;
+        return jdbcClient.sql(postSql)
+                .param("title", postEntity.getTitle())
+                .param("text", postEntity.getText())
+                .param("likesCount", postEntity.getLikesCount() != null ? postEntity.getLikesCount() : 0)
+                .param("image", postEntity.getImage())
+                .param("createAt", now)
+                .param("updateAt", now)
+                .query(PostEntity.class)
+                .single();
     }
 
     @Override
     public List<PostEntity> findPostsWithFilters(String titleSubstring, List<String> tags, int limit, int offset) {
         StringBuilder sql = new StringBuilder("""
-                SELECT DISTINCT p.*
-                FROM blog.posts p
-                LEFT JOIN blog.post_tags pt ON p.id = pt.post_id
-                LEFT JOIN blog.tags t ON pt.tag_id = t.id
-                WHERE 1=1
-                """);
-
-        MapSqlParameterSource params = new MapSqlParameterSource();
+            SELECT DISTINCT p.*
+            FROM blog.posts p
+            LEFT JOIN blog.post_tags pt ON p.id = pt.post_id
+            LEFT JOIN blog.tags t ON pt.tag_id = t.id
+            WHERE 1=1
+            """);
 
         if (titleSubstring != null && !titleSubstring.isEmpty()) {
             sql.append("AND LOWER(p.title) LIKE :titleSubstring ");
-            params.addValue("titleSubstring", "%" + titleSubstring.toLowerCase() + "%");
         }
 
         if (tags != null && !tags.isEmpty()) {
             for (int i = 0; i < tags.size(); i++) {
-                String tagParam = "tag" + i;
                 sql.append("AND EXISTS (")
                         .append("SELECT 1 FROM blog.post_tags pt2 ")
                         .append("JOIN blog.tags t2 ON pt2.tag_id = t2.id ")
-                        .append("WHERE pt2.post_id = p.id ").append("AND LOWER(t2.name) = LOWER(:").append(tagParam).append(")")
+                        .append("WHERE pt2.post_id = p.id ")
+                        .append("AND LOWER(t2.name) = LOWER(:tag").append(i).append(")")
                         .append(") ");
-                params.addValue(tagParam, tags.get(i));
             }
         }
 
         sql.append("ORDER BY p.create_at DESC LIMIT :limit OFFSET :offset");
-        params.addValue("limit", limit);
-        params.addValue("offset", offset);
 
-        return jdbcTemplate.query(sql.toString(), params, postRowMapper)
-                .stream()
-                .peek(post -> post.setTags(tagRepository.findTagsByPostId(post.getId())))
-                .toList();
+        var spec = jdbcClient.sql(sql.toString());
+
+        if (titleSubstring != null && !titleSubstring.isEmpty()) {
+            spec.param("titleSubstring", "%" + titleSubstring.toLowerCase() + "%");
+        }
+
+        if (tags != null && !tags.isEmpty()) {
+            for (int i = 0; i < tags.size(); i++) {
+                spec.param("tag" + i, tags.get(i));
+            }
+        }
+
+        spec.param("limit", limit)
+                .param("offset", offset);
+
+        return spec.query(PostEntity.class).list();
     }
 
     @Override
     public int countPostsWithFilters(String titleSubstring, List<String> tags) {
         StringBuilder sql = new StringBuilder("""
-                SELECT COUNT(DISTINCT p.id)
-                FROM blog.posts p
-                LEFT JOIN blog.post_tags pt ON p.id = pt.post_id
-                LEFT JOIN blog.tags t ON pt.tag_id = t.id
-                WHERE 1=1
-                """);
-
-        MapSqlParameterSource params = new MapSqlParameterSource();
+            SELECT COUNT(DISTINCT p.id)
+            FROM blog.posts p
+            LEFT JOIN blog.post_tags pt ON p.id = pt.post_id
+            LEFT JOIN blog.tags t ON pt.tag_id = t.id
+            WHERE 1=1
+            """);
 
         if (titleSubstring != null && !titleSubstring.isEmpty()) {
             sql.append("AND LOWER(p.title) LIKE :titleSubstring ");
-            params.addValue("titleSubstring", "%" + titleSubstring.toLowerCase() + "%");
         }
 
         if (tags != null && !tags.isEmpty()) {
             for (int i = 0; i < tags.size(); i++) {
-                String tagParam = "tag" + i;
                 sql.append("AND EXISTS (")
                         .append("SELECT 1 FROM blog.post_tags pt2 ")
                         .append("JOIN blog.tags t2 ON pt2.tag_id = t2.id ")
-                        .append("WHERE pt2.post_id = p.id ").append("AND LOWER(t2.name) = LOWER(:").append(tagParam).append(")")
+                        .append("WHERE pt2.post_id = p.id ")
+                        .append("AND LOWER(t2.name) = LOWER(:tag").append(i).append(")")
                         .append(") ");
-                params.addValue(tagParam, tags.get(i));
             }
         }
 
-        Integer count = jdbcTemplate.queryForObject(sql.toString(), params, Integer.class);
-        return count != null ? count : 0;
+        var spec = jdbcClient.sql(sql.toString());
+
+        if (titleSubstring != null && !titleSubstring.isEmpty()) {
+            spec.param("titleSubstring", "%" + titleSubstring.toLowerCase() + "%");
+        }
+
+        if (tags != null && !tags.isEmpty()) {
+            for (int i = 0; i < tags.size(); i++) {
+                spec.param("tag" + i, tags.get(i));
+            }
+        }
+
+        return spec.query(Integer.class).optional().orElse(0);
     }
 
     @Override
@@ -141,18 +126,11 @@ public class PostRepositoryImpl implements PostRepository {
                 SELECT * FROM blog.posts
                 WHERE id = :id;
                 """;
-        MapSqlParameterSource params = new MapSqlParameterSource();
-        params.addValue("id", postId);
 
-        try {
-            PostEntity postEntity = jdbcTemplate.queryForObject(sql, params, postRowMapper);
-            if (postEntity != null) {
-                postEntity.setTags(tagRepository.findTagsByPostId(postId));
-            }
-            return Optional.ofNullable(postEntity);
-        } catch (EmptyResultDataAccessException e) {
-            return Optional.empty();
-        }
+        return jdbcClient.sql(sql)
+                .param("id", postId)
+                .query(PostEntity.class)
+                .optional();
     }
 
     @Override
@@ -169,18 +147,14 @@ public class PostRepositoryImpl implements PostRepository {
 
         LocalDateTime now = LocalDateTime.now();
 
-        MapSqlParameterSource params = new MapSqlParameterSource();
-        params.addValue("id", postEntity.getId());
-        params.addValue("title", postEntity.getTitle());
-        params.addValue("text", postEntity.getText());
-        params.addValue("likesCount", postEntity.getLikesCount() != null ? postEntity.getLikesCount() : 0);
-        params.addValue("image", postEntity.getImage());
-        params.addValue("updateAt", now);
-
-        tagRepository.saveTagsAndPost(postEntity);
-
-        jdbcTemplate.update(postSql, params);
-
+        jdbcClient.sql(postSql)
+                .param("id", postEntity.getId())
+                .param("title", postEntity.getTitle())
+                .param("text", postEntity.getText())
+                .param("likesCount", postEntity.getLikesCount() != null ? postEntity.getLikesCount() : 0)
+                .param("image", postEntity.getImage())
+                .param("updateAt", now)
+                .update();
     }
 
     @Override
@@ -189,9 +163,9 @@ public class PostRepositoryImpl implements PostRepository {
                 DELETE FROM blog.posts
                 WHERE id = :postId
                 """;
-        MapSqlParameterSource params = new MapSqlParameterSource();
-        params.addValue("postId", postId);
 
-        jdbcTemplate.update(sql, params);
+        jdbcClient.sql(sql)
+                .param("postId", postId)
+                .update();
     }
 }

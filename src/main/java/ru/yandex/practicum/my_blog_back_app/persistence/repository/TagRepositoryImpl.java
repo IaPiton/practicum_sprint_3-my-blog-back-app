@@ -1,10 +1,7 @@
 package ru.yandex.practicum.my_blog_back_app.persistence.repository;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.dao.EmptyResultDataAccessException;
-import org.springframework.jdbc.core.RowMapper;
-import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
-import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Component;
 import ru.yandex.practicum.my_blog_back_app.persistence.entity.PostEntity;
 import ru.yandex.practicum.my_blog_back_app.persistence.entity.TagEntity;
@@ -15,15 +12,7 @@ import java.util.Optional;
 @Component
 @RequiredArgsConstructor
 public class TagRepositoryImpl implements TagRepository {
-    private final NamedParameterJdbcTemplate jdbcTemplate;
-
-
-    private final RowMapper<TagEntity> tagRowMapper = (rs, rowNum) -> {
-        TagEntity tagEntity = new TagEntity();
-        tagEntity.setId(rs.getLong("id"));
-        tagEntity.setName(rs.getString("name"));
-        return tagEntity;
-    };
+    private final JdbcClient jdbcClient;
 
     @Override
     public List<TagEntity> getTags(List<String> tags) {
@@ -42,13 +31,13 @@ public class TagRepositoryImpl implements TagRepository {
                 ON CONFLICT (post_id, tag_id) DO NOTHING;
                 """;
 
-        MapSqlParameterSource[] batchParams = postEntity.getTags().stream()
-                .map(tag -> new MapSqlParameterSource()
-                        .addValue("postId", postEntity.getId())
-                        .addValue("tagId", tag.getId()))
-                .toArray(MapSqlParameterSource[]::new);
 
-        jdbcTemplate.batchUpdate(tagSql, batchParams);
+        for (TagEntity tags : postEntity.getTags()) {
+            jdbcClient.sql(tagSql)
+                    .param("postId", postEntity.getId())
+                    .param("tagId", tags.getId())
+                    .update();
+        }
     }
 
     @Override
@@ -61,11 +50,10 @@ public class TagRepositoryImpl implements TagRepository {
                 ORDER BY t.name
                 """;
 
-        MapSqlParameterSource params = new MapSqlParameterSource();
-        params.addValue("postId", postId);
-
-
-        return jdbcTemplate.query(sql, params, tagRowMapper);
+        return jdbcClient.sql(sql)
+                .param("postId", postId)
+                .query(TagEntity.class)
+                .list();
 
     }
 
@@ -75,10 +63,10 @@ public class TagRepositoryImpl implements TagRepository {
                 DELETE FROM blog.post_tags
                 WHERE post_id = :postId
                 """;
-        MapSqlParameterSource params = new MapSqlParameterSource();
-        params.addValue("postId", postId);
 
-        jdbcTemplate.update(sql, params);
+        jdbcClient.sql(sql)
+                .param("postId", postId)
+                .update();
     }
 
     private TagEntity saveTag(String tag) {
@@ -86,18 +74,13 @@ public class TagRepositoryImpl implements TagRepository {
                 INSERT INTO blog.tags(name)
                 VALUES (:name)
                 ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name
-                RETURNING id;
+                RETURNING id, name;
                 """;
 
-        MapSqlParameterSource params = new MapSqlParameterSource();
-        params.addValue("name", tag);
-
-        Long id = jdbcTemplate.queryForObject(sql, params, Long.class);
-
-        TagEntity tagEntity = new TagEntity();
-        tagEntity.setId(id);
-        tagEntity.setName(tag);
-        return tagEntity;
+        return jdbcClient.sql(sql)
+                .param("name", tag)
+                .query(TagEntity.class)
+                .single();
     }
 
     private Optional<TagEntity> findTagByName(String tag) {
@@ -106,14 +89,9 @@ public class TagRepositoryImpl implements TagRepository {
                 WHERE t.name = :name;
                 """;
 
-        MapSqlParameterSource params = new MapSqlParameterSource();
-        params.addValue("name", tag);
-
-        try {
-            TagEntity tagEntity = jdbcTemplate.queryForObject(sql, params, tagRowMapper);
-            return Optional.ofNullable(tagEntity);
-        } catch (EmptyResultDataAccessException e) {
-            return Optional.empty();
-        }
+        return jdbcClient.sql(sql)
+                .param("name", tag)
+                .query(TagEntity.class)
+                .optional();
     }
 }

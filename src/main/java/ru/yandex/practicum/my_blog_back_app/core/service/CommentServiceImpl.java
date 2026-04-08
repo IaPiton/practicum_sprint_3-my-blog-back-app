@@ -5,6 +5,7 @@ import org.springframework.stereotype.Service;
 import ru.yandex.practicum.my_blog_back_app.api.dto.request.CommentCreateRequest;
 import ru.yandex.practicum.my_blog_back_app.api.dto.request.CommentUpdateRequest;
 import ru.yandex.practicum.my_blog_back_app.api.dto.response.CommentResponse;
+import ru.yandex.practicum.my_blog_back_app.api.handler.EntityNotFoundException;
 import ru.yandex.practicum.my_blog_back_app.persistence.entity.CommentsEntity;
 import ru.yandex.practicum.my_blog_back_app.persistence.mapper.CommentMapper;
 import ru.yandex.practicum.my_blog_back_app.persistence.repository.CommentRepository;
@@ -27,7 +28,7 @@ public class CommentServiceImpl implements CommentService {
 
     @Override
     public CommentResponse getCommentById(Long commentId) {
-        CommentsEntity commentsEntity = commentRepository.findById(commentId);
+        CommentsEntity commentsEntity = commentRepository.findById(commentId).orElseThrow(EntityNotFoundException::new);
         return commentMapper.toResponse(commentsEntity);
     }
 
@@ -42,7 +43,7 @@ public class CommentServiceImpl implements CommentService {
 
     @Override
     public CommentResponse updateComment(Long commentId, CommentUpdateRequest request) {
-        CommentsEntity commentsEntity = commentRepository.findById(commentId);
+        CommentsEntity commentsEntity = commentRepository.findById(commentId).orElseThrow(EntityNotFoundException::new);
         commentsEntity.setText(request.getText());
         commentRepository.update(commentsEntity);
         return commentMapper.toResponse(commentsEntity);

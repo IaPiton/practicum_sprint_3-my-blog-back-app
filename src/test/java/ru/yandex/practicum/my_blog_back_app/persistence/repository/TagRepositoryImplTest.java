@@ -4,8 +4,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
-import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.support.TransactionTemplate;
 import ru.yandex.practicum.my_blog_back_app.configuration.TestCommonConfiguration;
@@ -25,7 +24,7 @@ class TagRepositoryImplTest extends TestCommonConfiguration {
     private TagRepository tagRepository;
 
     @Autowired
-    private NamedParameterJdbcTemplate jdbcTemplate;
+    private JdbcClient jdbcClient;
 
     @Autowired
     private TransactionTemplate transactionTemplate;
@@ -36,29 +35,28 @@ class TagRepositoryImplTest extends TestCommonConfiguration {
     @BeforeEach
     void setUp() {
         transactionTemplate.execute(status -> {
-            jdbcTemplate.getJdbcTemplate().execute("DELETE FROM blog.post_tags");
-            jdbcTemplate.getJdbcTemplate().execute("DELETE FROM blog.posts");
-            jdbcTemplate.getJdbcTemplate().execute("DELETE FROM blog.tags");
+            jdbcClient.sql("DELETE FROM blog.post_tags").update();
+            jdbcClient.sql("DELETE FROM blog.posts").update();
+            jdbcClient.sql("DELETE FROM blog.tags").update();
             return null;
         });
 
         transactionTemplate.execute(status -> {
-            String insertPostSql = """
+            LocalDateTime now = LocalDateTime.now();
+
+            testPostId = jdbcClient.sql("""
                     INSERT INTO blog.posts (title, text, likes_count, image, create_at, update_at)
                     VALUES (:title, :text, :likesCount, :image, :createAt, :updateAt)
                     RETURNING id
-                    """;
-
-            LocalDateTime now = LocalDateTime.now();
-            MapSqlParameterSource params = new MapSqlParameterSource();
-            params.addValue("title", "Тестовый пост");
-            params.addValue("text", "Содержание тестового поста");
-            params.addValue("likesCount", 0L);
-            params.addValue("image", null);
-            params.addValue("createAt", now);
-            params.addValue("updateAt", now);
-
-            testPostId = jdbcTemplate.queryForObject(insertPostSql, params, Long.class);
+                    """)
+                    .param("title", "Тестовый пост")
+                    .param("text", "Содержание тестового поста")
+                    .param("likesCount", 0L)
+                    .param("image", null)
+                    .param("createAt", now)
+                    .param("updateAt", now)
+                    .query(Long.class)
+                    .single();
 
             testPost = new PostEntity();
             testPost.setId(testPostId);
@@ -71,10 +69,12 @@ class TagRepositoryImplTest extends TestCommonConfiguration {
     @Test
     @DisplayName("Должен получить существующие теги и создать новые")
     void shouldGetExistingAndCreateNewTags() {
-        String insertTagSql = "INSERT INTO blog.tags (name) VALUES (:name) RETURNING id";
-        MapSqlParameterSource params = new MapSqlParameterSource();
-        params.addValue("name", "java");
-        Long existingTagId = jdbcTemplate.queryForObject(insertTagSql, params, Long.class);
+        Long existingTagId = jdbcClient.sql("""
+                INSERT INTO blog.tags (name) VALUES (:name) RETURNING id
+                """)
+                .param("name", "java")
+                .query(Long.class)
+                .single();
 
         List<String> tagNames = List.of("java", "spring", "kotlin");
         List<TagEntity> tags = tagRepository.getTags(tagNames);
@@ -165,10 +165,10 @@ class TagRepositoryImplTest extends TestCommonConfiguration {
 
         tagRepository.saveTagsAndPost(testPost);
 
-        String countSql = "SELECT COUNT(*) FROM blog.post_tags WHERE post_id = :postId";
-        MapSqlParameterSource params = new MapSqlParameterSource();
-        params.addValue("postId", testPostId);
-        Integer count = jdbcTemplate.queryForObject(countSql, params, Integer.class);
+        Integer count = jdbcClient.sql("SELECT COUNT(*) FROM blog.post_tags WHERE post_id = :postId")
+                .param("postId", testPostId)
+                .query(Integer.class)
+                .single();
         assertThat(count).isEqualTo(2);
     }
 
@@ -180,14 +180,13 @@ class TagRepositoryImplTest extends TestCommonConfiguration {
         testPost.setTags(tags);
 
         tagRepository.saveTagsAndPost(testPost);
-
         tagRepository.saveTagsAndPost(testPost);
 
-        String countSql = "SELECT COUNT(*) FROM blog.post_tags WHERE post_id = :postId";
-        MapSqlParameterSource params = new MapSqlParameterSource();
-        params.addValue("postId", testPostId);
-        Integer count = jdbcTemplate.queryForObject(countSql, params, Integer.class);
-        assertThat(count).isEqualTo(2); // Должно быть 2, а не 4
+        Integer count = jdbcClient.sql("SELECT COUNT(*) FROM blog.post_tags WHERE post_id = :postId")
+                .param("postId", testPostId)
+                .query(Integer.class)
+                .single();
+        assertThat(count).isEqualTo(2);
     }
 
     @Test
@@ -221,19 +220,23 @@ class TagRepositoryImplTest extends TestCommonConfiguration {
         testPost.setTags(tags);
         tagRepository.saveTagsAndPost(testPost);
 
-        String countSql = "SELECT COUNT(*) FROM blog.post_tags WHERE post_id = :postId";
-        MapSqlParameterSource params = new MapSqlParameterSource();
-        params.addValue("postId", testPostId);
-        Integer beforeCount = jdbcTemplate.queryForObject(countSql, params, Integer.class);
+        Integer beforeCount = jdbcClient.sql("SELECT COUNT(*) FROM blog.post_tags WHERE post_id = :postId")
+                .param("postId", testPostId)
+                .query(Integer.class)
+                .single();
         assertThat(beforeCount).isEqualTo(2);
 
         tagRepository.deleteTagAndPost(testPostId);
 
-        Integer afterCount = jdbcTemplate.queryForObject(countSql, params, Integer.class);
+        Integer afterCount = jdbcClient.sql("SELECT COUNT(*) FROM blog.post_tags WHERE post_id = :postId")
+                .param("postId", testPostId)
+                .query(Integer.class)
+                .single();
         assertThat(afterCount).isZero();
 
-        String tagsCountSql = "SELECT COUNT(*) FROM blog.tags";
-        Integer tagsCount = jdbcTemplate.queryForObject(tagsCountSql, new MapSqlParameterSource(), Integer.class);
+        Integer tagsCount = jdbcClient.sql("SELECT COUNT(*) FROM blog.tags")
+                .query(Integer.class)
+                .single();
         assertThat(tagsCount).isEqualTo(2);
     }
 
@@ -242,20 +245,22 @@ class TagRepositoryImplTest extends TestCommonConfiguration {
     void shouldHandleDeleteForPostWithoutTags() {
         tagRepository.deleteTagAndPost(testPostId);
 
-        String countSql = "SELECT COUNT(*) FROM blog.post_tags WHERE post_id = :postId";
-        MapSqlParameterSource params = new MapSqlParameterSource();
-        params.addValue("postId", testPostId);
-        Integer count = jdbcTemplate.queryForObject(countSql, params, Integer.class);
+        Integer count = jdbcClient.sql("SELECT COUNT(*) FROM blog.post_tags WHERE post_id = :postId")
+                .param("postId", testPostId)
+                .query(Integer.class)
+                .single();
         assertThat(count).isZero();
     }
 
     @Test
     @DisplayName("Должен корректно обработать создание тега с уже существующим именем")
     void shouldHandleExistingTagName() {
-        String insertTagSql = "INSERT INTO blog.tags (name) VALUES (:name) RETURNING id";
-        MapSqlParameterSource params = new MapSqlParameterSource();
-        params.addValue("name", "java");
-        Long existingId = jdbcTemplate.queryForObject(insertTagSql, params, Long.class);
+        Long existingId = jdbcClient.sql("""
+                INSERT INTO blog.tags (name) VALUES (:name) RETURNING id
+                """)
+                .param("name", "java")
+                .query(Long.class)
+                .single();
 
         List<TagEntity> tags = tagRepository.getTags(List.of("java"));
 
@@ -296,13 +301,12 @@ class TagRepositoryImplTest extends TestCommonConfiguration {
                 "tag6", "tag7", "tag8", "tag9", "tag10");
         List<TagEntity> tags = tagRepository.getTags(tagNames);
         testPost.setTags(tags);
-
         tagRepository.saveTagsAndPost(testPost);
 
-        String countSql = "SELECT COUNT(*) FROM blog.post_tags WHERE post_id = :postId";
-        MapSqlParameterSource params = new MapSqlParameterSource();
-        params.addValue("postId", testPostId);
-        Integer count = jdbcTemplate.queryForObject(countSql, params, Integer.class);
+        Integer count = jdbcClient.sql("SELECT COUNT(*) FROM blog.post_tags WHERE post_id = :postId")
+                .param("postId", testPostId)
+                .query(Integer.class)
+                .single();
         assertThat(count).isEqualTo(10);
 
         List<TagEntity> foundTags = tagRepository.findTagsByPostId(testPostId);
@@ -331,10 +335,10 @@ class TagRepositoryImplTest extends TestCommonConfiguration {
 
         tagRepository.saveTagsAndPost(testPost);
 
-        String countSql = "SELECT COUNT(*) FROM blog.post_tags WHERE post_id = :postId";
-        MapSqlParameterSource params = new MapSqlParameterSource();
-        params.addValue("postId", testPostId);
-        Integer count = jdbcTemplate.queryForObject(countSql, params, Integer.class);
+        Integer count = jdbcClient.sql("SELECT COUNT(*) FROM blog.post_tags WHERE post_id = :postId")
+                .param("postId", testPostId)
+                .query(Integer.class)
+                .single();
         assertThat(count).isZero();
     }
 
