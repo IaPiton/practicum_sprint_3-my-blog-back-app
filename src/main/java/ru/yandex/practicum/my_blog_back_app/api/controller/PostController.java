@@ -1,6 +1,6 @@
 package ru.yandex.practicum.my_blog_back_app.api.controller;
 
-import jakarta.validation.Valid;
+//import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;

@@ -1,8 +1,8 @@
 package ru.yandex.practicum.my_blog_back_app.api.dto.request;
 
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotEmpty;
-import jakarta.validation.constraints.NotNull;
+//import jakarta.validation.constraints.NotBlank;
+//import jakarta.validation.constraints.NotEmpty;
+//import jakarta.validation.constraints.NotNull;
 import lombok.*;
 
 import java.util.List;
@@ -13,13 +13,13 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class PostCreateRequest {
-    @NotBlank(message = "Title пустой")
+//    @NotBlank(message = "Title пустой")
     private String title;
 
-    @NotBlank(message = "Text пустой")
+//    @NotBlank(message = "Text пустой")
     private String text;
 
-    @NotNull(message = "Tags не может быть пустым")
-    @NotEmpty(message = "Tags не может быть пустым")
+//    @NotNull(message = "Tags не может быть пустым")
+//    @NotEmpty(message = "Tags не может быть пустым")
     private List<String> tags;
 }

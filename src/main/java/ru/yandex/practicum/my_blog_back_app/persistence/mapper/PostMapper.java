@@ -22,7 +22,7 @@ public class PostMapper {
                 .text(postEntity.getText())
                 .likesCount(postEntity.getLikesCount())
                 .tags(postEntity.getTags().stream().map(TagEntity::getName).toList())
-                .commentsCount(commentRepository.countCommentsByPost(postEntity.getId()))
+//                .commentsCount(commentRepository.countCommentsByPost(postEntity.getId()))
                 .image(postEntity.getImage())
                 .build();
     }
@@ -34,7 +34,7 @@ public class PostMapper {
                 .text(truncatedText)
                 .tags(postEntity.getTags().stream().map(TagEntity::getName).toList())
                 .likesCount(postEntity.getLikesCount())
-                .commentsCount(commentRepository.countCommentsByPost(postEntity.getId()))
+//                .commentsCount(commentRepository.countCommentsByPost(postEntity.getId()))
                 .build();
     }
 
