@@ -7,6 +7,7 @@ import ru.yandex.practicum.my_blog_back_app.api.dto.request.PostUpdateRequest;
 import ru.yandex.practicum.my_blog_back_app.api.dto.response.PostListResponse;
 import ru.yandex.practicum.my_blog_back_app.api.dto.response.PostResponse;
 import ru.yandex.practicum.my_blog_back_app.api.dto.response.PostPreview;
+import ru.yandex.practicum.my_blog_back_app.api.handler.EntityNotFoundException;
 import ru.yandex.practicum.my_blog_back_app.core.model.SearchCriteria;
 import ru.yandex.practicum.my_blog_back_app.persistence.entity.PostEntity;
 import ru.yandex.practicum.my_blog_back_app.persistence.entity.TagEntity;
@@ -40,6 +41,11 @@ public class PostServiceImpl implements PostService {
                 offset
         );
 
+        posts = posts
+                .stream()
+                .peek(post -> post.setTags(tagRepository.findTagsByPostId(post.getId())))
+                .toList();
+
         int totalPosts = postRepository.countPostsWithFilters(
                 criteria.getTitleSubstring(),
                 criteria.getTags()
@@ -63,21 +69,30 @@ public class PostServiceImpl implements PostService {
 
     @Override
     public PostResponse getPostById(Long postId) {
-        PostEntity postEntity = postRepository.findById(postId).orElse(new PostEntity());
+        PostEntity postEntity = postRepository.findById(postId).orElseThrow(EntityNotFoundException::new);
+        postEntity.setTags(tagRepository.findTagsByPostId(postId));
+
         return postMapper.toResponse(postEntity);
     }
 
     @Override
     public PostResponse createPost(PostCreateRequest request) {
         List<TagEntity> tags = tagRepository.getTags(request.getTags());
-        PostEntity postEntity = postMapper.toEntity(request, tags);
+        PostEntity postEntity = postMapper.toEntity(request);
         postEntity = postRepository.savePost(postEntity);
+
+        postEntity.setTags(tags);
+
+        if (postEntity.getTags() != null && !postEntity.getTags().isEmpty()) {
+            tagRepository.saveTagsAndPost(postEntity);
+        }
         return postMapper.toResponse(postEntity);
     }
 
     @Override
     public PostResponse updatePost(PostUpdateRequest request) {
-        PostEntity postEntity = postRepository.findById(request.getId()).orElse(new PostEntity());
+        PostEntity postEntity = postRepository.findById(request.getId()).orElseThrow(EntityNotFoundException::new);
+        postEntity.setTags(tagRepository.findTagsByPostId(request.getId()));
 
         postEntity.setTitle(request.getTitle());
         postEntity.setText(request.getText());
@@ -86,6 +101,7 @@ public class PostServiceImpl implements PostService {
             tagRepository.deleteTagAndPost(request.getId());
             List<TagEntity> tagEntities = tagRepository.getTags(request.getTags());
             postEntity.setTags(tagEntities);
+            tagRepository.saveTagsAndPost(postEntity);
         }
 
         postRepository.update(postEntity);
@@ -101,7 +117,9 @@ public class PostServiceImpl implements PostService {
 
     @Override
     public Long incrementLikes(Long postId) {
-        PostEntity postEntity = postRepository.findById(postId).orElse(new PostEntity());
+        PostEntity postEntity = postRepository.findById(postId).orElseThrow(EntityNotFoundException::new);
+        postEntity.setTags(tagRepository.findTagsByPostId(postId));
+
         postEntity.setLikesCount(postEntity.getLikesCount() + 1);
         postRepository.update(postEntity);
         return postEntity.getLikesCount();
@@ -109,14 +127,16 @@ public class PostServiceImpl implements PostService {
 
     @Override
     public void updatePostImage(Long postId, byte[] image) {
-        PostEntity postEntity = postRepository.findById(postId).orElse(new PostEntity());
+        PostEntity postEntity = postRepository.findById(postId).orElseThrow(EntityNotFoundException::new);
+        postEntity.setTags(tagRepository.findTagsByPostId(postId));
         postEntity.setImage(image);
         postRepository.update(postEntity);
     }
 
     @Override
     public byte[] getPostImage(Long postId) {
-        PostEntity postEntity = postRepository.findById(postId).orElse(new PostEntity());
+        PostEntity postEntity = postRepository.findById(postId).orElseThrow(EntityNotFoundException::new);
+        postEntity.setTags(tagRepository.findTagsByPostId(postId));
         return postEntity.getImage();
     }
 

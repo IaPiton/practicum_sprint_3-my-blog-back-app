@@ -9,7 +9,6 @@ import ru.yandex.practicum.my_blog_back_app.persistence.entity.PostEntity;
 import ru.yandex.practicum.my_blog_back_app.persistence.entity.TagEntity;
 import ru.yandex.practicum.my_blog_back_app.persistence.repository.CommentRepository;
 
-import java.util.List;
 
 @Component
 @RequiredArgsConstructor
@@ -39,12 +38,11 @@ public class PostMapper {
                 .build();
     }
 
-    public PostEntity toEntity(PostCreateRequest request, List<TagEntity> tags) {
+    public PostEntity toEntity(PostCreateRequest request) {
         PostEntity postEntity = new PostEntity();
         postEntity.setTitle(request.getTitle());
         postEntity.setText(request.getText());
         postEntity.setLikesCount(0L);
-        postEntity.setTags(tags);
         return postEntity;
     }
 }

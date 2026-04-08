@@ -4,93 +4,27 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
-import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
-import org.springframework.jdbc.datasource.DataSourceTransactionManager;
-import org.springframework.jdbc.datasource.DriverManagerDataSource;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
-import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
-import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.support.TransactionTemplate;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
+import ru.yandex.practicum.my_blog_back_app.configuration.TestCommonConfiguration;
 import ru.yandex.practicum.my_blog_back_app.persistence.entity.PostEntity;
 import ru.yandex.practicum.my_blog_back_app.persistence.entity.TagEntity;
 
-import javax.sql.DataSource;
 import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@SpringJUnitConfig
-@Testcontainers
+@ActiveProfiles("test")
 @DisplayName("Тесты репозитория постов")
-class PostRepositoryImplTest {
-
-    @Container
-    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:17.5")
-            .withDatabaseName("testdb")
-            .withUsername("test")
-            .withPassword("test")
-            .withInitScript("init.sql");
-
-    @DynamicPropertySource
-    static void configureProperties(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", postgres::getJdbcUrl);
-        registry.add("spring.datasource.username", postgres::getUsername);
-        registry.add("spring.datasource.password", postgres::getPassword);
-        registry.add("spring.datasource.driver-class-name", postgres::getDriverClassName);
-    }
-
-    @Configuration
-    static class TestConfig {
-
-        @Bean
-        public DataSource dataSourceTest() {
-            DriverManagerDataSource dataSource = new DriverManagerDataSource();
-            dataSource.setDriverClassName(postgres.getDriverClassName());
-            dataSource.setUrl(postgres.getJdbcUrl());
-            dataSource.setUsername(postgres.getUsername());
-            dataSource.setPassword(postgres.getPassword());
-            return dataSource;
-        }
-
-        @Bean
-        public NamedParameterJdbcTemplate namedParameterJdbcTemplateTest(DataSource dataSource) {
-            return new NamedParameterJdbcTemplate(dataSource);
-        }
-
-        @Bean
-        public PlatformTransactionManager transactionManager(DataSource dataSource) {
-            return new DataSourceTransactionManager(dataSource);
-        }
-
-        @Bean
-        public TransactionTemplate transactionTemplate(PlatformTransactionManager transactionManager) {
-            return new TransactionTemplate(transactionManager);
-        }
-
-        @Bean
-        public TagRepository tagRepository(NamedParameterJdbcTemplate jdbcTemplate) {
-            return new TagRepositoryImpl(jdbcTemplate);
-        }
-
-        @Bean
-        public PostRepository postRepository(NamedParameterJdbcTemplate jdbcTemplate, TagRepository tagRepository) {
-            return new PostRepositoryImpl(jdbcTemplate, tagRepository);
-        }
-    }
+class PostRepositoryImplTest extends TestCommonConfiguration {
 
     @Autowired
     private PostRepository postRepository;
 
     @Autowired
-    private NamedParameterJdbcTemplate jdbcTemplate;
+    private JdbcClient jdbcClient;
 
     @Autowired
     private TransactionTemplate transactionTemplate;
@@ -101,25 +35,27 @@ class PostRepositoryImplTest {
 
     @BeforeEach
     void setUp() {
-        // Очистка данных перед каждым тестом
         transactionTemplate.execute(status -> {
-            jdbcTemplate.getJdbcTemplate().execute("DELETE FROM blog.post_tags");
-            jdbcTemplate.getJdbcTemplate().execute("DELETE FROM blog.posts");
-            jdbcTemplate.getJdbcTemplate().execute("DELETE FROM blog.tags");
+            jdbcClient.sql("DELETE FROM blog.post_tags").update();
+            jdbcClient.sql("DELETE FROM blog.posts").update();
+            jdbcClient.sql("DELETE FROM blog.tags").update();
             return null;
         });
 
-        // Сохраняем теги напрямую в БД
         transactionTemplate.execute(status -> {
-            String insertTagSql = "INSERT INTO blog.tags (name) VALUES (:name) RETURNING id";
+            Long tagId1 = jdbcClient.sql("""
+                    INSERT INTO blog.tags (name) VALUES (:name) RETURNING id
+                    """)
+                    .param("name", "java")
+                    .query(Long.class)
+                    .single();
 
-            MapSqlParameterSource params1 = new MapSqlParameterSource();
-            params1.addValue("name", "java");
-            Long tagId1 = jdbcTemplate.queryForObject(insertTagSql, params1, Long.class);
-
-            MapSqlParameterSource params2 = new MapSqlParameterSource();
-            params2.addValue("name", "spring");
-            Long tagId2 = jdbcTemplate.queryForObject(insertTagSql, params2, Long.class);
+            Long tagId2 = jdbcClient.sql("""
+                    INSERT INTO blog.tags (name) VALUES (:name) RETURNING id
+                    """)
+                    .param("name", "spring")
+                    .query(Long.class)
+                    .single();
 
             testTag1 = new TagEntity();
             testTag1.setId(tagId1);
@@ -132,7 +68,6 @@ class PostRepositoryImplTest {
             return null;
         });
 
-        // Подготовка тестового поста
         testPost = new PostEntity();
         testPost.setTitle("Тестовый пост");
         testPost.setText("Содержание тестового поста");
@@ -156,27 +91,11 @@ class PostRepositoryImplTest {
         assertThat(savedPost.getTitle()).isEqualTo("Пост без тегов");
         assertThat(savedPost.getTags()).isNull();
 
-        String countSql = "SELECT COUNT(*) FROM blog.post_tags WHERE post_id = :postId";
-        MapSqlParameterSource params = new MapSqlParameterSource();
-        params.addValue("postId", savedPost.getId());
-        Integer count = jdbcTemplate.queryForObject(countSql, params, Integer.class);
+        Integer count = jdbcClient.sql("SELECT COUNT(*) FROM blog.post_tags WHERE post_id = :postId")
+                .param("postId", savedPost.getId())
+                .query(Integer.class)
+                .single();
         assertThat(count).isZero();
-    }
-
-    @Test
-    @DisplayName("Должен сохранить пост с тегами")
-    void shouldSavePostWithTags() {
-        PostEntity savedPost = postRepository.savePost(testPost);
-
-        assertThat(savedPost.getId()).isNotNull();
-        assertThat(savedPost.getTitle()).isEqualTo("Тестовый пост");
-        assertThat(savedPost.getTags()).hasSize(2);
-
-        String countSql = "SELECT COUNT(*) FROM blog.post_tags WHERE post_id = :postId";
-        MapSqlParameterSource params = new MapSqlParameterSource();
-        params.addValue("postId", savedPost.getId());
-        Integer count = jdbcTemplate.queryForObject(countSql, params, Integer.class);
-        assertThat(count).isEqualTo(2);
     }
 
     @Test
@@ -189,7 +108,6 @@ class PostRepositoryImplTest {
         assertThat(foundPost).isPresent();
         assertThat(foundPost.get().getId()).isEqualTo(savedPost.getId());
         assertThat(foundPost.get().getTitle()).isEqualTo("Тестовый пост");
-        assertThat(foundPost.get().getTags()).hasSize(2);
     }
 
     @Test
@@ -222,7 +140,13 @@ class PostRepositoryImplTest {
     @Test
     @DisplayName("Должен найти посты с фильтрацией по тегам")
     void shouldFindPostsWithTagFilter() {
-        postRepository.savePost(testPost);
+        PostEntity savedPost = postRepository.savePost(testPost);
+        jdbcClient.sql("""
+            INSERT INTO blog.post_tags(post_id, tag_id) VALUES (:postId, :tagId)
+            """)
+                .param("postId", savedPost.getId())
+                .param("tagId", testTag1.getId())
+                .update();
 
         PostEntity anotherPost = new PostEntity();
         anotherPost.setTitle("Пост без тегов");
@@ -324,21 +248,51 @@ class PostRepositoryImplTest {
     @Test
     @DisplayName("Должен подсчитать посты с фильтрацией по одному тегу")
     void shouldCountPostsWithSingleTagFilter() {
-        postRepository.savePost(testPost);
+        PostEntity savedTestPost = postRepository.savePost(testPost);
+        jdbcClient.sql("""
+            INSERT INTO blog.post_tags(post_id, tag_id) VALUES (:postId, :tagId)
+            """)
+                .param("postId", savedTestPost.getId())
+                .param("tagId", testTag1.getId())
+                .update();
+        jdbcClient.sql("""
+            INSERT INTO blog.post_tags(post_id, tag_id) VALUES (:postId, :tagId)
+            """)
+                .param("postId", savedTestPost.getId())
+                .param("tagId", testTag2.getId())
+                .update();
 
-        PostEntity postWithOnlyJava = new PostEntity();
-        postWithOnlyJava.setTitle("Только Java");
-        postWithOnlyJava.setText("Содержание");
-        postWithOnlyJava.setLikesCount(0L);
-        postWithOnlyJava.setTags(List.of(testTag1));
-        postRepository.savePost(postWithOnlyJava);
+        transactionTemplate.execute(status -> {
+            PostEntity postWithOnlyJava = new PostEntity();
+            postWithOnlyJava.setTitle("Только Java");
+            postWithOnlyJava.setText("Содержание");
+            postWithOnlyJava.setLikesCount(0L);
+            PostEntity saved = postRepository.savePost(postWithOnlyJava);
 
-        PostEntity postWithOnlySpring = new PostEntity();
-        postWithOnlySpring.setTitle("Только Spring");
-        postWithOnlySpring.setText("Содержание");
-        postWithOnlySpring.setLikesCount(0L);
-        postWithOnlySpring.setTags(List.of(testTag2));
-        postRepository.savePost(postWithOnlySpring);
+            jdbcClient.sql("""
+                INSERT INTO blog.post_tags(post_id, tag_id) VALUES (:postId, :tagId)
+                """)
+                    .param("postId", saved.getId())
+                    .param("tagId", testTag1.getId())
+                    .update();
+            return null;
+        });
+
+        transactionTemplate.execute(status -> {
+            PostEntity postWithOnlySpring = new PostEntity();
+            postWithOnlySpring.setTitle("Только Spring");
+            postWithOnlySpring.setText("Содержание");
+            postWithOnlySpring.setLikesCount(0L);
+            PostEntity saved = postRepository.savePost(postWithOnlySpring);
+
+            jdbcClient.sql("""
+                INSERT INTO blog.post_tags(post_id, tag_id) VALUES (:postId, :tagId)
+                """)
+                    .param("postId", saved.getId())
+                    .param("tagId", testTag2.getId())
+                    .update();
+            return null;
+        });
 
         int count = postRepository.countPostsWithFilters(null, List.of("java"));
 
@@ -348,21 +302,53 @@ class PostRepositoryImplTest {
     @Test
     @DisplayName("Должен подсчитать посты с фильтрацией по нескольким тегам (AND логика)")
     void shouldCountPostsWithMultipleTagsAndLogic() {
-        postRepository.savePost(testPost);
+        PostEntity savedPost = postRepository.savePost(testPost);
 
-        PostEntity postWithOnlyJava = new PostEntity();
-        postWithOnlyJava.setTitle("Только Java");
-        postWithOnlyJava.setText("Содержание");
-        postWithOnlyJava.setLikesCount(0L);
-        postWithOnlyJava.setTags(List.of(testTag1));
-        postRepository.savePost(postWithOnlyJava);
+        jdbcClient.sql("""
+            INSERT INTO blog.post_tags(post_id, tag_id) VALUES (:postId, :tagId)
+            """)
+                .param("postId", savedPost.getId())
+                .param("tagId", testTag1.getId())
+                .update();
 
-        PostEntity postWithOnlySpring = new PostEntity();
-        postWithOnlySpring.setTitle("Только Spring");
-        postWithOnlySpring.setText("Содержание");
-        postWithOnlySpring.setLikesCount(0L);
-        postWithOnlySpring.setTags(List.of(testTag2));
-        postRepository.savePost(postWithOnlySpring);
+        jdbcClient.sql("""
+            INSERT INTO blog.post_tags(post_id, tag_id) VALUES (:postId, :tagId)
+            """)
+                .param("postId", savedPost.getId())
+                .param("tagId", testTag2.getId())
+                .update();
+
+        transactionTemplate.execute(status -> {
+            PostEntity postWithOnlyJava = new PostEntity();
+            postWithOnlyJava.setTitle("Только Java");
+            postWithOnlyJava.setText("Содержание");
+            postWithOnlyJava.setLikesCount(0L);
+            PostEntity saved = postRepository.savePost(postWithOnlyJava);
+
+            jdbcClient.sql("""
+                INSERT INTO blog.post_tags(post_id, tag_id) VALUES (:postId, :tagId)
+                """)
+                    .param("postId", saved.getId())
+                    .param("tagId", testTag1.getId())
+                    .update();
+            return null;
+        });
+
+        transactionTemplate.execute(status -> {
+            PostEntity postWithOnlySpring = new PostEntity();
+            postWithOnlySpring.setTitle("Только Spring");
+            postWithOnlySpring.setText("Содержание");
+            postWithOnlySpring.setLikesCount(0L);
+            PostEntity saved = postRepository.savePost(postWithOnlySpring);
+
+            jdbcClient.sql("""
+                INSERT INTO blog.post_tags(post_id, tag_id) VALUES (:postId, :tagId)
+                """)
+                    .param("postId", saved.getId())
+                    .param("tagId", testTag2.getId())
+                    .update();
+            return null;
+        });
 
         int count = postRepository.countPostsWithFilters(null, List.of("java", "spring"));
 
@@ -372,7 +358,13 @@ class PostRepositoryImplTest {
     @Test
     @DisplayName("Должен подсчитать посты с фильтрацией по заголовку и тегам одновременно")
     void shouldCountPostsWithTitleAndTagFilters() {
-        postRepository.savePost(testPost);
+        PostEntity savedTestPost = postRepository.savePost(testPost);
+        jdbcClient.sql("""
+            INSERT INTO blog.post_tags(post_id, tag_id) VALUES (:postId, :tagId)
+            """)
+                .param("postId", savedTestPost.getId())
+                .param("tagId", testTag1.getId())
+                .update();
 
         PostEntity anotherPost = new PostEntity();
         anotherPost.setTitle("Тестовый пост без тегов");
@@ -380,12 +372,21 @@ class PostRepositoryImplTest {
         anotherPost.setLikesCount(0L);
         postRepository.savePost(anotherPost);
 
-        PostEntity postWithDifferentTitle = new PostEntity();
-        postWithDifferentTitle.setTitle("Другой пост");
-        postWithDifferentTitle.setText("Содержание");
-        postWithDifferentTitle.setLikesCount(0L);
-        postWithDifferentTitle.setTags(List.of(testTag1));
-        postRepository.savePost(postWithDifferentTitle);
+        transactionTemplate.execute(status -> {
+            PostEntity postWithDifferentTitle = new PostEntity();
+            postWithDifferentTitle.setTitle("Другой пост");
+            postWithDifferentTitle.setText("Содержание");
+            postWithDifferentTitle.setLikesCount(0L);
+            PostEntity saved = postRepository.savePost(postWithDifferentTitle);
+
+            jdbcClient.sql("""
+                INSERT INTO blog.post_tags(post_id, tag_id) VALUES (:postId, :tagId)
+                """)
+                    .param("postId", saved.getId())
+                    .param("tagId", testTag1.getId())
+                    .update();
+            return null;
+        });
 
         int count = postRepository.countPostsWithFilters("тестовый", List.of("java"));
 
@@ -443,7 +444,13 @@ class PostRepositoryImplTest {
     @Test
     @DisplayName("Должен игнорировать регистр при подсчете по тегам")
     void shouldIgnoreCaseWhenCountingByTags() {
-        postRepository.savePost(testPost);
+        PostEntity savedPost = postRepository.savePost(testPost);
+        jdbcClient.sql("""
+            INSERT INTO blog.post_tags(post_id, tag_id) VALUES (:postId, :tagId)
+            """)
+                .param("postId", savedPost.getId())
+                .param("tagId", testTag1.getId())
+                .update();
 
         int countLower = postRepository.countPostsWithFilters(null, List.of("java"));
         int countUpper = postRepository.countPostsWithFilters(null, List.of("JAVA"));
@@ -457,21 +464,45 @@ class PostRepositoryImplTest {
     @Test
     @DisplayName("Должен корректно подсчитать посты с тегом, который есть у нескольких постов")
     void shouldCountPostsWithTagThatAppearsInMultiplePosts() {
-        postRepository.savePost(testPost);
+        PostEntity savedTestPost = postRepository.savePost(testPost);
+        jdbcClient.sql("""
+            INSERT INTO blog.post_tags(post_id, tag_id) VALUES (:postId, :tagId)
+            """)
+                .param("postId", savedTestPost.getId())
+                .param("tagId", testTag1.getId())
+                .update();
 
-        PostEntity anotherPostWithJava = new PostEntity();
-        anotherPostWithJava.setTitle("Еще один пост с Java");
-        anotherPostWithJava.setText("Содержание");
-        anotherPostWithJava.setLikesCount(0L);
-        anotherPostWithJava.setTags(List.of(testTag1));
-        postRepository.savePost(anotherPostWithJava);
+        transactionTemplate.execute(status -> {
+            PostEntity anotherPostWithJava = new PostEntity();
+            anotherPostWithJava.setTitle("Еще один пост с Java");
+            anotherPostWithJava.setText("Содержание");
+            anotherPostWithJava.setLikesCount(0L);
+            PostEntity saved = postRepository.savePost(anotherPostWithJava);
 
-        PostEntity postWithoutJava = new PostEntity();
-        postWithoutJava.setTitle("Пост без Java");
-        postWithoutJava.setText("Содержание");
-        postWithoutJava.setLikesCount(0L);
-        postWithoutJava.setTags(List.of(testTag2));
-        postRepository.savePost(postWithoutJava);
+            jdbcClient.sql("""
+                INSERT INTO blog.post_tags(post_id, tag_id) VALUES (:postId, :tagId)
+                """)
+                    .param("postId", saved.getId())
+                    .param("tagId", testTag1.getId())
+                    .update();
+            return null;
+        });
+
+        transactionTemplate.execute(status -> {
+            PostEntity postWithoutJava = new PostEntity();
+            postWithoutJava.setTitle("Пост без Java");
+            postWithoutJava.setText("Содержание");
+            postWithoutJava.setLikesCount(0L);
+            PostEntity saved = postRepository.savePost(postWithoutJava);
+
+            jdbcClient.sql("""
+                INSERT INTO blog.post_tags(post_id, tag_id) VALUES (:postId, :tagId)
+                """)
+                    .param("postId", saved.getId())
+                    .param("tagId", testTag2.getId())
+                    .update();
+            return null;
+        });
 
         int count = postRepository.countPostsWithFilters(null, List.of("java"));
 

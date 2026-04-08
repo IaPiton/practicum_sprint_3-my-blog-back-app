@@ -13,6 +13,7 @@ import ru.yandex.practicum.my_blog_back_app.api.dto.request.PostUpdateRequest;
 import ru.yandex.practicum.my_blog_back_app.api.dto.response.PostListResponse;
 import ru.yandex.practicum.my_blog_back_app.api.dto.response.PostResponse;
 import ru.yandex.practicum.my_blog_back_app.api.dto.response.PostPreview;
+import ru.yandex.practicum.my_blog_back_app.api.handler.EntityNotFoundException;
 import ru.yandex.practicum.my_blog_back_app.persistence.entity.PostEntity;
 import ru.yandex.practicum.my_blog_back_app.persistence.entity.TagEntity;
 import ru.yandex.practicum.my_blog_back_app.persistence.mapper.PostMapper;
@@ -24,6 +25,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
@@ -49,14 +51,16 @@ class PostServiceImplTest {
     private PostEntity testPostEntity;
     private PostResponse testPostResponse;
     private PostPreview testPostPreview;
+    private List<TagEntity> testTags;
 
     @BeforeEach
     void setUp() {
-        testPostEntity = new PostEntity();
-        testPostEntity.setId(1L);
-        testPostEntity.setTitle("Тестовый пост");
-        testPostEntity.setText("Очень длинное содержание поста, которое превышает сто двадцать восемь символов для проверки обрезки текста в превью.");
-        testPostEntity.setLikesCount(5L);
+        testTags = List.of(
+                createTag(1L, "java"),
+                createTag(2L, "spring")
+        );
+
+        testPostEntity = createPostEntity("Содержание", testTags);
 
         testPostResponse = PostResponse.builder()
                 .id(1L)
@@ -73,6 +77,24 @@ class PostServiceImplTest {
                 .build();
     }
 
+    private TagEntity createTag(Long id, String name) {
+        TagEntity tag = new TagEntity();
+        tag.setId(id);
+        tag.setName(name);
+        return tag;
+    }
+
+    private PostEntity createPostEntity(String text, List<TagEntity> tags) {
+        PostEntity post = new PostEntity();
+        post.setId(1L);
+        post.setTitle("Тестовый пост");
+        post.setText(text);
+        post.setLikesCount(5L);
+        post.setImage(null);
+        post.setTags(tags);
+        return post;
+    }
+
     @Nested
     @DisplayName("Тесты получения списка постов")
     class GetPostsTests {
@@ -85,6 +107,7 @@ class PostServiceImplTest {
                     .thenReturn(posts);
             when(postRepository.countPostsWithFilters(eq(""), eq(List.of())))
                     .thenReturn(1);
+            when(tagRepository.findTagsByPostId(1L)).thenReturn(testTags);
             when(postMapper.toPreviewResponse(any(PostEntity.class), anyString()))
                     .thenReturn(testPostPreview);
 
@@ -95,6 +118,7 @@ class PostServiceImplTest {
             assertThat(response.getHasPrev()).isFalse();
             assertThat(response.getHasNext()).isFalse();
             assertThat(response.getLastPage()).isEqualTo(1);
+            verify(tagRepository).findTagsByPostId(1L);
         }
 
         @Test
@@ -106,6 +130,7 @@ class PostServiceImplTest {
                     .thenReturn(posts);
             when(postRepository.countPostsWithFilters(eq("привет мир"), eq(List.of("java", "spring"))))
                     .thenReturn(1);
+            when(tagRepository.findTagsByPostId(1L)).thenReturn(testTags);
             when(postMapper.toPreviewResponse(any(), anyString())).thenReturn(testPostPreview);
 
             PostListResponse response = postService.getPosts(searchQuery, 1, 10);
@@ -121,6 +146,7 @@ class PostServiceImplTest {
                     .thenReturn(posts);
             when(postRepository.countPostsWithFilters(any(), any()))
                     .thenReturn(5);
+            when(tagRepository.findTagsByPostId(1L)).thenReturn(testTags);
             when(postMapper.toPreviewResponse(any(), anyString())).thenReturn(testPostPreview);
 
             PostListResponse response = postService.getPosts(null, 1, 2);
@@ -128,6 +154,20 @@ class PostServiceImplTest {
             assertThat(response.getLastPage()).isEqualTo(3);
             assertThat(response.getHasPrev()).isFalse();
             assertThat(response.getHasNext()).isTrue();
+        }
+
+        @Test
+        @DisplayName("Должен вернуть пустой список если постов нет")
+        void shouldReturnEmptyListWhenNoPosts() {
+            when(postRepository.findPostsWithFilters(eq(""), eq(List.of()), eq(10), eq(0)))
+                    .thenReturn(List.of());
+            when(postRepository.countPostsWithFilters(eq(""), eq(List.of())))
+                    .thenReturn(0);
+
+            PostListResponse response = postService.getPosts(null, 1, 10);
+
+            assertThat(response.getPosts()).isEmpty();
+            assertThat(response.getLastPage()).isZero();
         }
     }
 
@@ -139,24 +179,22 @@ class PostServiceImplTest {
         @DisplayName("Должен вернуть пост, если он существует")
         void shouldReturnPostWhenExists() {
             when(postRepository.findById(1L)).thenReturn(Optional.of(testPostEntity));
+            when(tagRepository.findTagsByPostId(1L)).thenReturn(testTags);
             when(postMapper.toResponse(testPostEntity)).thenReturn(testPostResponse);
 
             PostResponse result = postService.getPostById(1L);
 
             assertThat(result).isEqualTo(testPostResponse);
+            verify(tagRepository).findTagsByPostId(1L);
         }
 
         @Test
-        @DisplayName("Должен вернуть пустой пост, если пост не найден")
-        void shouldReturnEmptyPostWhenNotFound() {
+        @DisplayName("Должен выбросить исключение, если пост не найден")
+        void shouldThrowExceptionWhenPostNotFound() {
             when(postRepository.findById(99L)).thenReturn(Optional.empty());
-            when(postMapper.toResponse(any(PostEntity.class))).thenReturn(
-                    PostResponse.builder().build()
-            );
 
-            PostResponse result = postService.getPostById(99L);
-
-            assertThat(result.getId()).isNull();
+            assertThatThrownBy(() -> postService.getPostById(99L))
+                    .isInstanceOf(EntityNotFoundException.class);
         }
     }
 
@@ -173,9 +211,8 @@ class PostServiceImplTest {
                     .tags(List.of("java", "spring"))
                     .build();
 
-            List<TagEntity> tags = List.of(new TagEntity(), new TagEntity());
-            when(tagRepository.getTags(List.of("java", "spring"))).thenReturn(tags);
-            when(postMapper.toEntity(request, tags)).thenReturn(testPostEntity);
+            when(tagRepository.getTags(List.of("java", "spring"))).thenReturn(testTags);
+            when(postMapper.toEntity(request)).thenReturn(testPostEntity);
             when(postRepository.savePost(testPostEntity)).thenReturn(testPostEntity);
             when(postMapper.toResponse(testPostEntity)).thenReturn(testPostResponse);
 
@@ -184,6 +221,28 @@ class PostServiceImplTest {
             assertThat(result).isEqualTo(testPostResponse);
             verify(tagRepository).getTags(List.of("java", "spring"));
             verify(postRepository).savePost(testPostEntity);
+            verify(tagRepository).saveTagsAndPost(testPostEntity);
+        }
+
+        @Test
+        @DisplayName("Должен успешно создать пост без тегов")
+        void shouldCreatePostWithoutTags() {
+            PostCreateRequest request = PostCreateRequest.builder()
+                    .title("Новый пост")
+                    .text("Содержание")
+                    .tags(List.of())
+                    .build();
+
+            when(tagRepository.getTags(List.of())).thenReturn(List.of());
+            when(postMapper.toEntity(request)).thenReturn(testPostEntity);
+            when(postRepository.savePost(testPostEntity)).thenReturn(testPostEntity);
+            when(postMapper.toResponse(testPostEntity)).thenReturn(testPostResponse);
+
+            PostResponse result = postService.createPost(request);
+
+            assertThat(result).isEqualTo(testPostResponse);
+            verify(tagRepository).getTags(List.of());
+            verify(tagRepository, never()).saveTagsAndPost(any());
         }
     }
 
@@ -194,7 +253,6 @@ class PostServiceImplTest {
         @Test
         @DisplayName("Должен обновить пост без изменения тегов")
         void shouldUpdatePostWithoutTags() {
-
             PostUpdateRequest request = PostUpdateRequest.builder()
                     .id(1L)
                     .title("Обновленный заголовок")
@@ -203,6 +261,7 @@ class PostServiceImplTest {
                     .build();
 
             when(postRepository.findById(1L)).thenReturn(Optional.of(testPostEntity));
+            when(tagRepository.findTagsByPostId(1L)).thenReturn(testTags);
             when(postMapper.toResponse(any(PostEntity.class))).thenReturn(testPostResponse);
 
             postService.updatePost(request);
@@ -210,12 +269,14 @@ class PostServiceImplTest {
             assertThat(testPostEntity.getTitle()).isEqualTo("Обновленный заголовок");
             assertThat(testPostEntity.getText()).isEqualTo("Обновленный текст");
             verify(tagRepository, never()).deleteTagAndPost(anyLong());
+            verify(tagRepository, never()).saveTagsAndPost(any());
             verify(postRepository).update(testPostEntity);
         }
 
         @Test
         @DisplayName("Должен обновить пост с новыми тегами")
         void shouldUpdatePostWithNewTags() {
+            List<TagEntity> newTags = List.of(createTag(3L, "newTag"));
             PostUpdateRequest request = PostUpdateRequest.builder()
                     .id(1L)
                     .title("Обновленный заголовок")
@@ -223,8 +284,8 @@ class PostServiceImplTest {
                     .tags(List.of("newTag"))
                     .build();
 
-            List<TagEntity> newTags = List.of(new TagEntity());
             when(postRepository.findById(1L)).thenReturn(Optional.of(testPostEntity));
+            when(tagRepository.findTagsByPostId(1L)).thenReturn(testTags);
             when(tagRepository.getTags(List.of("newTag"))).thenReturn(newTags);
             when(postMapper.toResponse(any(PostEntity.class))).thenReturn(testPostResponse);
 
@@ -232,12 +293,13 @@ class PostServiceImplTest {
 
             verify(tagRepository).deleteTagAndPost(1L);
             verify(tagRepository).getTags(List.of("newTag"));
+            verify(tagRepository).saveTagsAndPost(testPostEntity);
             assertThat(testPostEntity.getTags()).isEqualTo(newTags);
         }
 
         @Test
-        @DisplayName("При обновлении несуществующего поста должен создать новый")
-        void shouldCreateNewPostIfNotFoundOnUpdate() {
+        @DisplayName("Должен выбросить исключение при обновлении несуществующего поста")
+        void shouldThrowExceptionWhenPostNotFoundOnUpdate() {
             PostUpdateRequest request = PostUpdateRequest.builder()
                     .id(99L)
                     .title("Заголовок")
@@ -246,11 +308,9 @@ class PostServiceImplTest {
                     .build();
 
             when(postRepository.findById(99L)).thenReturn(Optional.empty());
-            when(postMapper.toResponse(any(PostEntity.class))).thenReturn(testPostResponse);
 
-            postService.updatePost(request);
-
-            verify(postRepository).update(any(PostEntity.class));
+            assertThatThrownBy(() -> postService.updatePost(request))
+                    .isInstanceOf(EntityNotFoundException.class);
         }
     }
 
@@ -279,22 +339,22 @@ class PostServiceImplTest {
         @DisplayName("Должен увеличить количество лайков и вернуть новое значение")
         void shouldIncrementLikesAndReturnNewCount() {
             when(postRepository.findById(1L)).thenReturn(Optional.of(testPostEntity));
+            when(tagRepository.findTagsByPostId(1L)).thenReturn(testTags);
 
             Long newLikesCount = postService.incrementLikes(1L);
 
-             assertThat(newLikesCount).isEqualTo(6L);
+            assertThat(newLikesCount).isEqualTo(6L);
             assertThat(testPostEntity.getLikesCount()).isEqualTo(6L);
             verify(postRepository).update(testPostEntity);
         }
 
         @Test
-        @DisplayName("При лайке несуществующего поста должен вернуть 1")
-        void shouldReturnOneIfPostNotFoundOnLike() {
+        @DisplayName("Должен выбросить исключение при лайке несуществующего поста")
+        void shouldThrowExceptionWhenPostNotFoundOnLike() {
             when(postRepository.findById(99L)).thenReturn(Optional.empty());
 
-            Long newLikesCount = postService.incrementLikes(99L);
-
-            assertThat(newLikesCount).isEqualTo(1L);
+            assertThatThrownBy(() -> postService.incrementLikes(99L))
+                    .isInstanceOf(EntityNotFoundException.class);
         }
     }
 
@@ -307,6 +367,7 @@ class PostServiceImplTest {
         void shouldUpdatePostImage() {
             byte[] imageData = new byte[]{1, 2, 3};
             when(postRepository.findById(1L)).thenReturn(Optional.of(testPostEntity));
+            when(tagRepository.findTagsByPostId(1L)).thenReturn(testTags);
 
             postService.updatePostImage(1L, imageData);
 
@@ -315,11 +376,22 @@ class PostServiceImplTest {
         }
 
         @Test
+        @DisplayName("Должен выбросить исключение при обновлении изображения несуществующего поста")
+        void shouldThrowExceptionWhenPostNotFoundOnImageUpdate() {
+            byte[] imageData = new byte[]{1, 2, 3};
+            when(postRepository.findById(99L)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> postService.updatePostImage(99L, imageData))
+                    .isInstanceOf(EntityNotFoundException.class);
+        }
+
+        @Test
         @DisplayName("Должен вернуть изображение поста")
         void shouldGetPostImage() {
             byte[] imageData = new byte[]{1, 2, 3};
             testPostEntity.setImage(imageData);
             when(postRepository.findById(1L)).thenReturn(Optional.of(testPostEntity));
+            when(tagRepository.findTagsByPostId(1L)).thenReturn(testTags);
 
             byte[] result = postService.getPostImage(1L);
 
@@ -327,42 +399,90 @@ class PostServiceImplTest {
         }
 
         @Test
-        @DisplayName("При отсутствии поста должен вернуть null изображение")
-        void shouldReturnNullImageIfPostNotFound() {
+        @DisplayName("Должен выбросить исключение при получении изображения несуществующего поста")
+        void shouldThrowExceptionWhenPostNotFoundOnImageGet() {
             when(postRepository.findById(99L)).thenReturn(Optional.empty());
 
-             byte[] result = postService.getPostImage(99L);
-
-            assertThat(result).isNull();
+            assertThatThrownBy(() -> postService.getPostImage(99L))
+                    .isInstanceOf(EntityNotFoundException.class);
         }
     }
 
     @Nested
-    @DisplayName("Тесты приватных методов")
-    class PrivateMethodTests {
+    @DisplayName("Тесты парсинга поискового запроса")
+    class ParseSearchStringTests {
 
         @Test
-        @DisplayName("Должен обрезать длинный текст в превью до 128 символов")
+        @DisplayName("Должен корректно распарсить пустой поисковый запрос")
+        void shouldParseEmptySearch() {
+            postService.getPosts(null, 1, 10);
+
+            verify(postRepository).findPostsWithFilters(eq(""), eq(List.of()), anyInt(), anyInt());
+        }
+
+        @Test
+        @DisplayName("Должен корректно распарсить только теги")
+        void shouldParseOnlyTags() {
+            String searchQuery = "#java #spring";
+
+            postService.getPosts(searchQuery, 1, 10);
+
+            verify(postRepository).findPostsWithFilters(eq(""), eq(List.of("java", "spring")), anyInt(), anyInt());
+        }
+
+        @Test
+        @DisplayName("Должен корректно распарсить только текст")
+        void shouldParseOnlyText() {
+            String searchQuery = "привет мир";
+
+            postService.getPosts(searchQuery, 1, 10);
+
+            verify(postRepository).findPostsWithFilters(eq("привет мир"), eq(List.of()), anyInt(), anyInt());
+        }
+
+        @Test
+        @DisplayName("Должен обрезать длинный текст в превью до 128 символов с многоточием")
         void shouldTruncateLongTextInPreview() {
             String longText = "a".repeat(200);
-            testPostEntity.setText(longText);
-            List<PostEntity> posts = List.of(testPostEntity);
+            PostEntity postWithLongText = createPostEntity(longText, testTags);
+            List<PostEntity> posts = List.of(postWithLongText);
 
             when(postRepository.findPostsWithFilters(any(), any(), eq(10), eq(0)))
                     .thenReturn(posts);
             when(postRepository.countPostsWithFilters(any(), any()))
                     .thenReturn(1);
-            when(postMapper.toPreviewResponse(eq(testPostEntity), anyString()))
+            when(tagRepository.findTagsByPostId(1L)).thenReturn(testTags);
+            when(postMapper.toPreviewResponse(eq(postWithLongText), anyString()))
                     .thenAnswer(invocation -> {
                         String truncated = invocation.getArgument(1);
-                        assertThat(truncated).hasSize(128 + 3); // + "..."
+                        assertThat(truncated).hasSize(128 + 3);
                         assertThat(truncated).endsWith("...");
                         return testPostPreview;
                     });
 
             postService.getPosts(null, 1, 10);
 
-            verify(postMapper).toPreviewResponse(eq(testPostEntity), argThat(text -> text.length() == 131));
+            verify(postMapper).toPreviewResponse(eq(postWithLongText), argThat(text -> text.length() == 131));
+        }
+
+        @Test
+        @DisplayName("Не должен обрезать короткий текст в превью")
+        void shouldNotTruncateShortTextInPreview() {
+            String shortText = "Короткий текст";
+            PostEntity postWithShortText = createPostEntity(shortText, testTags);
+            List<PostEntity> posts = List.of(postWithShortText);
+
+            when(postRepository.findPostsWithFilters(any(), any(), eq(10), eq(0)))
+                    .thenReturn(posts);
+            when(postRepository.countPostsWithFilters(any(), any()))
+                    .thenReturn(1);
+            when(tagRepository.findTagsByPostId(1L)).thenReturn(testTags);
+            when(postMapper.toPreviewResponse(eq(postWithShortText), eq(shortText)))
+                    .thenReturn(testPostPreview);
+
+            postService.getPosts(null, 1, 10);
+
+            verify(postMapper).toPreviewResponse(eq(postWithShortText), eq(shortText));
         }
     }
 }

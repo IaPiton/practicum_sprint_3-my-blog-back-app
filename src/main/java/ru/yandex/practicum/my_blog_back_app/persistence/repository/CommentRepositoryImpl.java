@@ -1,31 +1,20 @@
 package ru.yandex.practicum.my_blog_back_app.persistence.repository;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.dao.DataAccessException;
-import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
-import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Component;
 import ru.yandex.practicum.my_blog_back_app.persistence.entity.CommentsEntity;
 
 import java.time.LocalDateTime;
-import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
 
 @Component
 @RequiredArgsConstructor
 public class CommentRepositoryImpl implements CommentRepository {
-    private final NamedParameterJdbcTemplate jdbcTemplate;
-
-    private final RowMapper<CommentsEntity> commentRowMapper = (rs, rowNum) -> {
-        CommentsEntity commentsEntity = new CommentsEntity();
-        commentsEntity.setId(rs.getLong("id"));
-        commentsEntity.setText(rs.getString("text"));
-        commentsEntity.setPostId(rs.getLong("post_id"));
-        commentsEntity.setCreateAt(rs.getTimestamp("create_at").toLocalDateTime());
-        commentsEntity.setUpdateAt(rs.getTimestamp("update_at").toLocalDateTime());
-        return commentsEntity;
-    };
+    private final JdbcClient jdbcClient;
 
     @Override
     public Long countCommentsByPost(Long postId) {
@@ -35,11 +24,11 @@ public class CommentRepositoryImpl implements CommentRepository {
                 WHERE c.post_id = :postId
                 """;
 
-        MapSqlParameterSource params = new MapSqlParameterSource();
-        params.addValue("postId", postId);
-
-        Long count = jdbcTemplate.queryForObject(sql, params, Long.class);
-        return count != null ? count : 0L;
+        return jdbcClient.sql(sql)
+                .param("postId", postId)
+                .query(Long.class)
+                .optional()
+                .orElse(0L);
     }
 
     @Override
@@ -48,11 +37,13 @@ public class CommentRepositoryImpl implements CommentRepository {
                 SELECT COUNT(*) FROM blog.posts WHERE id = :postId
                 """;
 
-        MapSqlParameterSource params = new MapSqlParameterSource();
-        params.addValue("postId", postId);
+        Integer count = jdbcClient.sql(sql)
+                .param("postId", postId)
+                .query(Integer.class)
+                .optional()
+                .orElse(0);
 
-        Integer count = jdbcTemplate.queryForObject(sql, params, Integer.class);
-        return count != null && count > 0;
+        return count > 0;
     }
 
     @Override
@@ -64,14 +55,13 @@ public class CommentRepositoryImpl implements CommentRepository {
                 ORDER BY create_at ASC
                 """;
 
-        MapSqlParameterSource params = new MapSqlParameterSource();
-        params.addValue("postId", postId);
-
-        try {
-            return jdbcTemplate.query(sql, params, commentRowMapper);
-        } catch (DataAccessException e) {
-            return Collections.emptyList();
-        }
+        return jdbcClient.sql(sql)
+                .param("postId", postId)
+                .query(CommentsEntity.class)
+                .list()
+                .stream()
+                .filter(Objects::nonNull)
+                .toList();
     }
 
     @Override
@@ -84,25 +74,27 @@ public class CommentRepositoryImpl implements CommentRepository {
 
         LocalDateTime now = LocalDateTime.now();
 
-        MapSqlParameterSource params = new MapSqlParameterSource();
-        params.addValue("text", commentsEntity.getText());
-        params.addValue("postId", commentsEntity.getPostId());
-        params.addValue("createAt", now);
-        params.addValue("updateAt", now);
-
-        return jdbcTemplate.queryForObject(commentSql, params, Long.class);
+        return jdbcClient.sql(commentSql)
+                .param("text", commentsEntity.getText())
+                .param("postId", commentsEntity.getPostId())
+                .param("createAt", now)
+                .param("updateAt", now)
+                .query(Long.class)
+                .optional()
+                .orElseThrow(() -> new RuntimeException("Ошибка при сохранении комментария"));
     }
 
     @Override
-    public CommentsEntity findById(Long commentId) {
+    public Optional<CommentsEntity> findById(Long commentId) {
         String sql = """
                 SELECT * FROM blog.comments
                 WHERE id = :id;
                 """;
-        MapSqlParameterSource params = new MapSqlParameterSource();
-        params.addValue("id", commentId);
 
-        return jdbcTemplate.queryForObject(sql, params, commentRowMapper);
+        return jdbcClient.sql(sql)
+                .param("id", commentId)
+                .query(CommentsEntity.class)
+                .optional();
     }
 
     @Override
@@ -116,12 +108,11 @@ public class CommentRepositoryImpl implements CommentRepository {
 
         LocalDateTime now = LocalDateTime.now();
 
-        MapSqlParameterSource params = new MapSqlParameterSource();
-        params.addValue("id", commentsEntity.getId());
-        params.addValue("text", commentsEntity.getText());
-        params.addValue("updateAt", now);
-
-        jdbcTemplate.update(postSql, params);
+        jdbcClient.sql(postSql)
+                .param("id", commentsEntity.getId())
+                .param("text", commentsEntity.getText())
+                .param("updateAt", now)
+                .update();
     }
 
     @Override
@@ -133,7 +124,9 @@ public class CommentRepositoryImpl implements CommentRepository {
         MapSqlParameterSource params = new MapSqlParameterSource();
         params.addValue("id", commentId);
 
-        jdbcTemplate.update(sql, params);
+        jdbcClient.sql(sql)
+                .param("id", commentId)
+                .update();
     }
 
     @Override
@@ -142,10 +135,10 @@ public class CommentRepositoryImpl implements CommentRepository {
                 DELETE FROM blog.comments
                 WHERE post_id = :postId
                 """;
-        MapSqlParameterSource params = new MapSqlParameterSource();
-        params.addValue("postId", postId);
 
-        jdbcTemplate.update(sql, params);
+        jdbcClient.sql(sql)
+                .param("postId", postId)
+                .update();
     }
 
 }
