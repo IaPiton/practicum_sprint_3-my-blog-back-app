@@ -6,12 +6,12 @@ import java.util.List;
 import java.util.Optional;
 
 public interface CommentRepository {
-    Long countCommentsByPost(Long postId);
-    boolean postExists(Long postId);
-    List<CommentsEntity> findCommentsByPostId(Long postId);
-    Long save(CommentsEntity commentsEntity);
-    Optional<CommentsEntity> findById(Long commentId);
-    void update(CommentsEntity commentsEntity);
-    void deleteByCommentId(Long commentId);
-    void deleteByPostId(Long postId);
+//    Long countCommentsByPost(Long postId);
+//    boolean postExists(Long postId);
+//    List<CommentsEntity> findCommentsByPostId(Long postId);
+//    Long save(CommentsEntity commentsEntity);
+//    Optional<CommentsEntity> findById(Long commentId);
+//    void update(CommentsEntity commentsEntity);
+//    void deleteByCommentId(Long commentId);
+//    void deleteByPostId(Long postId);
 }
