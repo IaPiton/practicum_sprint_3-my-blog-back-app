@@ -28,14 +28,14 @@
         <!--        <tomcat-embed-core.version>10.1.39</tomcat-embed-core.version>-->
         <!--        <tomcat-embed-jasper.version>10.1.39</tomcat-embed-jasper.version>-->
         <!--        <jackson-databind.version>2.15.2</jackson-databind.version>-->
-        <!--        <jakarta.validation-api.version>3.0.2</jakarta.validation-api.version>-->
+                <jakarta.validation-api.version>3.0.2</jakarta.validation-api.version>
         <!--        <logback-classic.version>1.5.13</logback-classic.version>-->
         <!--        <lombok.version>1.18.30</lombok.version>-->
         <postgresql.version>42.7.0</postgresql.version>
         <!--        <HikariCP.version>5.1.0</HikariCP.version>-->
-        <!--        <jakarta.persistence-api.version>3.1.0</jakarta.persistence-api.version>-->
+<!--                <jakarta.persistence-api.version>3.1.0</jakarta.persistence-api.version>-->
         <!--        <hibernate-core.version>6.3.1.Final</hibernate-core.version>-->
-        <!--        <hibernate-validator.version>8.0.1.Final</hibernate-validator.version>-->
+<!--                <hibernate-validator.version>8.0.1.Final</hibernate-validator.version>-->
         <!--        <junit-jupiter.version>5.10.1</junit-jupiter.version>-->
         <!--        <junit-platform-launcher.version>1.10.1</junit-platform-launcher.version>-->
         <!--        <assertj-core.version>3.27.7</assertj-core.version>-->
@@ -53,6 +53,30 @@
                 <artifactId>postgresql</artifactId>
                 <version>${postgresql.version}</version>
             </dependency>
+
+                        <dependency>
+                            <groupId>jakarta.validation</groupId>
+                            <artifactId>jakarta.validation-api</artifactId>
+                            <version>${jakarta.validation-api.version}</version>
+                        </dependency>
+
+<!--                        <dependency>-->
+<!--                            <groupId>jakarta.servlet</groupId>-->
+<!--                            <artifactId>jakarta.servlet-api</artifactId>-->
+<!--                            <version>${jakarta.servlet-api.version}</version>-->
+<!--                        </dependency>-->
+
+<!--                        <dependency>-->
+<!--                            <groupId>jakarta.persistence</groupId>-->
+<!--                            <artifactId>jakarta.persistence-api</artifactId>-->
+<!--                            <version>${jakarta.persistence-api.version}</version>-->
+<!--                        </dependency>-->
+
+<!--                        <dependency>-->
+<!--                            <groupId>org.hibernate.validator</groupId>-->
+<!--                            <artifactId>hibernate-validator</artifactId>-->
+<!--                            <version>${hibernate-validator.version}</version>-->
+<!--                        </dependency>-->
         </dependencies>
         <!--        <dependencies>-->
         <!--            <dependency>-->
@@ -85,11 +109,7 @@
         <!--                <version>${tomcat-embed-core.version}</version>-->
         <!--            </dependency>-->
 
-        <!--            <dependency>-->
-        <!--                <groupId>jakarta.servlet</groupId>-->
-        <!--                <artifactId>jakarta.servlet-api</artifactId>-->
-        <!--                <version>${jakarta.servlet-api.version}</version>-->
-        <!--            </dependency>-->
+
 
         <!--            <dependency>-->
         <!--                <groupId>org.apache.tomcat.embed</groupId>-->
@@ -103,11 +123,7 @@
         <!--                <version>${jackson-databind.version}</version>-->
         <!--            </dependency>-->
 
-        <!--            <dependency>-->
-        <!--                <groupId>jakarta.validation</groupId>-->
-        <!--                <artifactId>jakarta.validation-api</artifactId>-->
-        <!--                <version>${jakarta.validation-api.version}</version>-->
-        <!--            </dependency>-->
+
 
         <!--            <dependency>-->
         <!--                <groupId>ch.qos.logback</groupId>-->
@@ -135,11 +151,7 @@
         <!--                <version>${dotenv-java.version}</version>-->
         <!--            </dependency>-->
 
-        <!--            <dependency>-->
-        <!--                <groupId>jakarta.persistence</groupId>-->
-        <!--                <artifactId>jakarta.persistence-api</artifactId>-->
-        <!--                <version>${jakarta.persistence-api.version}</version>-->
-        <!--            </dependency>-->
+
 
         <!--            <dependency>-->
         <!--                <groupId>org.hibernate.orm</groupId>-->
@@ -147,11 +159,7 @@
         <!--                <version>${hibernate-core.version}</version>-->
         <!--            </dependency>-->
 
-        <!--            <dependency>-->
-        <!--                <groupId>org.hibernate.validator</groupId>-->
-        <!--                <artifactId>hibernate-validator</artifactId>-->
-        <!--                <version>${hibernate-validator.version}</version>-->
-        <!--            </dependency>-->
+
 
         <!--            <dependency>-->
         <!--                <groupId>org.junit.jupiter</groupId>-->
@@ -271,6 +279,11 @@
             <optional>true</optional>
         </dependency>
 
+                <dependency>
+                    <groupId>jakarta.validation</groupId>
+                    <artifactId>jakarta.validation-api</artifactId>
+                </dependency>
+
         <!--        <dependency>-->
         <!--            <groupId>org.springframework</groupId>-->
         <!--            <artifactId>spring-context</artifactId>-->
@@ -311,10 +324,7 @@
         <!--            <artifactId>jackson-databind</artifactId>-->
         <!--        </dependency>-->
 
-        <!--        <dependency>-->
-        <!--            <groupId>jakarta.validation</groupId>-->
-        <!--            <artifactId>jakarta.validation-api</artifactId>-->
-        <!--        </dependency>-->
+
 
         <!--        <dependency>-->
         <!--            <groupId>ch.qos.logback</groupId>-->

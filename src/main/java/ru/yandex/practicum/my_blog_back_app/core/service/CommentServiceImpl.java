@@ -1,50 +1,64 @@
 package ru.yandex.practicum.my_blog_back_app.core.service;
 
-//@Service
-//@RequiredArgsConstructor
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import ru.yandex.practicum.my_blog_back_app.api.dto.request.CommentCreateRequest;
+import ru.yandex.practicum.my_blog_back_app.api.dto.request.CommentUpdateRequest;
+import ru.yandex.practicum.my_blog_back_app.api.dto.response.CommentResponse;
+import ru.yandex.practicum.my_blog_back_app.persistence.mapper.CommentMapper;
+
+import java.util.List;
+
+@Service
+@RequiredArgsConstructor
 public class CommentServiceImpl implements CommentService {
 //    private final CommentRepository commentRepository;
-//    private final CommentMapper commentMapper;
-//
-//    @Override
-//    public List<CommentResponse> getCommentsByPostId(Long postId) {
+    private final CommentMapper commentMapper;
+
+    @Override
+    public List<CommentResponse> getCommentsByPostId(Long postId) {
 //        List<CommentsEntity> commentsEntities = commentRepository.findCommentsByPostId(postId);
 //        return commentsEntities.stream()
 //                .map(commentMapper::toResponse)
 //                .toList();
-//    }
-//
-//    @Override
-//    public CommentResponse getCommentById(Long commentId) {
+        return null;
+    }
+
+    @Override
+    public CommentResponse getCommentById(Long commentId) {
 //        CommentsEntity commentsEntity = commentRepository.findById(commentId).orElseThrow(EntityNotFoundException::new);
 //        return commentMapper.toResponse(commentsEntity);
-//    }
-//
-//    @Override
-//    public CommentResponse createComment(CommentCreateRequest request) {
+        return null;
+    }
+
+    @Override
+    public CommentResponse createComment(CommentCreateRequest request) {
 //        CommentsEntity commentsEntity = new CommentsEntity();
 //        commentsEntity.setPostId(request.getPostId());
 //        commentsEntity.setText(request.getText());
 //        commentsEntity.setId(commentRepository.save(commentsEntity));
 //        return commentMapper.toResponse(commentsEntity);
-//    }
-//
-//    @Override
-//    public CommentResponse updateComment(Long commentId, CommentUpdateRequest request) {
+        return null;
+    }
+
+    @Override
+    public CommentResponse updateComment(Long commentId, CommentUpdateRequest request) {
 //        CommentsEntity commentsEntity = commentRepository.findById(commentId).orElseThrow(EntityNotFoundException::new);
 //        commentsEntity.setText(request.getText());
 //        commentRepository.update(commentsEntity);
 //        return commentMapper.toResponse(commentsEntity);
-//    }
-//
-//    @Override
-//    public void deleteComment(Long commentId) {
+        return null;
+    }
+
+    @Override
+    public void deleteComment(Long commentId) {
 //        commentRepository.deleteByCommentId(commentId);
-//    }
-//
-//    @Override
-//    public boolean postExists(Long postId) {
+    }
+
+    @Override
+    public boolean postExists(Long postId) {
 //        return commentRepository.postExists(postId);
-//    }
+        return false;
+    }
 
 }

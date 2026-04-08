@@ -1,15 +1,29 @@
 package ru.yandex.practicum.my_blog_back_app.core.service;
 
-//@Service
-//@RequiredArgsConstructor
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import ru.yandex.practicum.my_blog_back_app.api.dto.request.PostCreateRequest;
+import ru.yandex.practicum.my_blog_back_app.api.dto.request.PostUpdateRequest;
+import ru.yandex.practicum.my_blog_back_app.api.dto.response.PostListResponse;
+import ru.yandex.practicum.my_blog_back_app.api.dto.response.PostPreview;
+import ru.yandex.practicum.my_blog_back_app.api.dto.response.PostResponse;
+import ru.yandex.practicum.my_blog_back_app.core.model.SearchCriteria;
+import ru.yandex.practicum.my_blog_back_app.persistence.entity.PostEntity;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+@Service
+@RequiredArgsConstructor
 public class PostServiceImpl implements PostService {
 //    private final PostRepository postRepository;
 //    private final TagRepository tagRepository;
 //    private final CommentRepository commentRepository;
 //    private final PostMapper postMapper;
-//
-//    @Override
-//    public PostListResponse getPosts(String search, int pageNumber, int pageSize) {
+
+    @Override
+    public PostListResponse getPosts(String search, int pageNumber, int pageSize) {
 //        SearchCriteria criteria = parseSearchString(search);
 //
 //        int offset = (pageNumber - 1) * pageSize;
@@ -45,18 +59,20 @@ public class PostServiceImpl implements PostService {
 //                .hasNext(hasNext)
 //                .lastPage(lastPage)
 //                .build();
-//    }
-//
-//    @Override
-//    public PostResponse getPostById(Long postId) {
+        return null;
+    }
+
+    @Override
+    public PostResponse getPostById(Long postId) {
 //        PostEntity postEntity = postRepository.findById(postId).orElseThrow(EntityNotFoundException::new);
 //        postEntity.setTags(tagRepository.findTagsByPostId(postId));
 //
 //        return postMapper.toResponse(postEntity);
-//    }
-//
-//    @Override
-//    public PostResponse createPost(PostCreateRequest request) {
+        return null;
+    }
+
+    @Override
+    public PostResponse createPost(PostCreateRequest request) {
 //        List<TagEntity> tags = tagRepository.getTags(request.getTags());
 //        PostEntity postEntity = postMapper.toEntity(request);
 //        postEntity = postRepository.savePost(postEntity);
@@ -67,10 +83,11 @@ public class PostServiceImpl implements PostService {
 //            tagRepository.saveTagsAndPost(postEntity);
 //        }
 //        return postMapper.toResponse(postEntity);
-//    }
-//
-//    @Override
-//    public PostResponse updatePost(PostUpdateRequest request) {
+        return null;
+    }
+
+    @Override
+    public PostResponse updatePost(PostUpdateRequest request) {
 //        PostEntity postEntity = postRepository.findById(request.getId()).orElseThrow(EntityNotFoundException::new);
 //        postEntity.setTags(tagRepository.findTagsByPostId(request.getId()));
 //
@@ -86,74 +103,78 @@ public class PostServiceImpl implements PostService {
 //
 //        postRepository.update(postEntity);
 //        return postMapper.toResponse(postEntity);
-//    }
-//
-//    @Override
-//    public void deletePost(Long postId) {
+        return null;
+    }
+
+    @Override
+    public void deletePost(Long postId) {
 //        commentRepository.deleteByPostId(postId);
 //        tagRepository.deleteTagAndPost(postId);
 //        postRepository.delete(postId);
-//    }
-//
-//    @Override
-//    public Long incrementLikes(Long postId) {
+    }
+
+    @Override
+    public Long incrementLikes(Long postId) {
 //        PostEntity postEntity = postRepository.findById(postId).orElseThrow(EntityNotFoundException::new);
 //        postEntity.setTags(tagRepository.findTagsByPostId(postId));
 //
 //        postEntity.setLikesCount(postEntity.getLikesCount() + 1);
 //        postRepository.update(postEntity);
 //        return postEntity.getLikesCount();
-//    }
-//
-//    @Override
-//    public void updatePostImage(Long postId, byte[] image) {
+        return null;
+    }
+
+    @Override
+    public void updatePostImage(Long postId, byte[] image) {
 //        PostEntity postEntity = postRepository.findById(postId).orElseThrow(EntityNotFoundException::new);
 //        postEntity.setTags(tagRepository.findTagsByPostId(postId));
 //        postEntity.setImage(image);
 //        postRepository.update(postEntity);
-//    }
-//
-//    @Override
-//    public byte[] getPostImage(Long postId) {
+    }
+
+    @Override
+    public byte[] getPostImage(Long postId) {
 //        PostEntity postEntity = postRepository.findById(postId).orElseThrow(EntityNotFoundException::new);
 //        postEntity.setTags(tagRepository.findTagsByPostId(postId));
 //        return postEntity.getImage();
-//    }
-//
-//
-//    private SearchCriteria parseSearchString(String search) {
-//        if (search == null || search.trim().isEmpty()) {
-//            return new SearchCriteria("", Collections.emptyList());
-//        }
-//
-//        String[] words = search.trim().split("\\s+");
-//
-//        List<String> tags = new ArrayList<>();
-//        List<String> titleWords = new ArrayList<>();
-//
-//        for (String word : words) {
-//            if (word.startsWith("#")) {
-//                String tag = word.substring(1);
-//                if (!tag.isEmpty()) {
-//                    tags.add(tag);
-//                }
-//            } else if (!word.isEmpty()) {
-//                titleWords.add(word);
-//            }
-//        }
-//
-//        String titleSubstring = String.join(" ", titleWords);
-//
-//        return new SearchCriteria(titleSubstring, tags);
-//    }
-//
-//    private PostPreview convertToPreviewDto(PostEntity post) {
+        return null;
+    }
+
+
+    private SearchCriteria parseSearchString(String search) {
+        if (search == null || search.trim().isEmpty()) {
+            return new SearchCriteria("", Collections.emptyList());
+        }
+
+        String[] words = search.trim().split("\\s+");
+
+        List<String> tags = new ArrayList<>();
+        List<String> titleWords = new ArrayList<>();
+
+        for (String word : words) {
+            if (word.startsWith("#")) {
+                String tag = word.substring(1);
+                if (!tag.isEmpty()) {
+                    tags.add(tag);
+                }
+            } else if (!word.isEmpty()) {
+                titleWords.add(word);
+            }
+        }
+
+        String titleSubstring = String.join(" ", titleWords);
+
+        return new SearchCriteria(titleSubstring, tags);
+    }
+
+    private PostPreview convertToPreviewDto(PostEntity post) {
 //        String truncatedText = post.getText();
 //        if (truncatedText.length() > 128) {
 //            truncatedText = truncatedText.substring(0, 128) + "...";
 //        }
 //
 //        return postMapper.toPreviewResponse(post, truncatedText);
-//    }
+        return null;
+    }
 
 }

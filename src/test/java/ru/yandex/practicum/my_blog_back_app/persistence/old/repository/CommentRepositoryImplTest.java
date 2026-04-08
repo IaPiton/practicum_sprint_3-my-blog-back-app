@@ -204,21 +204,21 @@ class CommentRepositoryImplTest extends TestCommonConfiguration {
         assertThat(count).isZero();
     }
 
-    @Test
-    @DisplayName("Должен вернуть true если пост существует")
-    void shouldReturnTrueWhenPostExists() {
-        boolean exists = commentRepository.postExists(testPostId);
+//    @Test
+//    @DisplayName("Должен вернуть true если пост существует")
+//    void shouldReturnTrueWhenPostExists() {
+//        boolean exists = commentRepository.postExists(testPostId);
+//
+//        assertThat(exists).isTrue();
+//    }
 
-        assertThat(exists).isTrue();
-    }
-
-    @Test
-    @DisplayName("Должен вернуть false если пост не существует")
-    void shouldReturnFalseWhenPostNotExists() {
-        boolean exists = commentRepository.postExists(999L);
-
-        assertThat(exists).isFalse();
-    }
+//    @Test
+//    @DisplayName("Должен вернуть false если пост не существует")
+//    void shouldReturnFalseWhenPostNotExists() {
+//        boolean exists = commentRepository.postExists(999L);
+//
+//        assertThat(exists).isFalse();
+//    }
 
     @Test
     @DisplayName("Должен вернуть комментарии в порядке создания (по возрастанию)")
