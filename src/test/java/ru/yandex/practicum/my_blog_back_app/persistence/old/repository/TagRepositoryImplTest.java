@@ -1,4 +1,4 @@
-package ru.yandex.practicum.my_blog_back_app.persistence.repository;
+package ru.yandex.practicum.my_blog_back_app.persistence.old.repository;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -21,7 +21,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class TagRepositoryImplTest extends TestCommonConfiguration {
 
     @Autowired
-    private TagRepository tagRepository;
+    private ru.yandex.practicum.my_blog_back_app.persistence.old.repository.TagRepositoryOld tagRepository;
 
     @Autowired
     private JdbcClient jdbcClient;

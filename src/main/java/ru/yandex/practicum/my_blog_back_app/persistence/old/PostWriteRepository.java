@@ -1,6 +1,4 @@
-package ru.yandex.practicum.my_blog_back_app.persistence.repository;
-
-import ru.yandex.practicum.my_blog_back_app.persistence.entity.PostEntity;
+package ru.yandex.practicum.my_blog_back_app.persistence.old.repository;
 
 public interface PostWriteRepository {
 //    PostEntity savePost(PostEntity postEntity);

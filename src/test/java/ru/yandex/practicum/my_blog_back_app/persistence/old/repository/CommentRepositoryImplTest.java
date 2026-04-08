@@ -1,4 +1,4 @@
-package ru.yandex.practicum.my_blog_back_app.persistence.repository;
+package ru.yandex.practicum.my_blog_back_app.persistence.old.repository;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -23,7 +23,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class CommentRepositoryImplTest extends TestCommonConfiguration {
 
     @Autowired
-    private CommentRepository commentRepository;
+    private ru.yandex.practicum.my_blog_back_app.persistence.old.repository.CommentRepositoryOld commentRepository;
 
     @Autowired
     private JdbcClient jdbcClient;

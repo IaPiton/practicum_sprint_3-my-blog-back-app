@@ -1,11 +1,7 @@
-package ru.yandex.practicum.my_blog_back_app.persistence.repository;
+package ru.yandex.practicum.my_blog_back_app.persistence.old.repository;
 
-import ru.yandex.practicum.my_blog_back_app.persistence.entity.CommentsEntity;
 
-import java.util.List;
-import java.util.Optional;
-
-public interface CommentRepository {
+public interface CommentRepositoryOld {
 //    Long countCommentsByPost(Long postId);
 //    boolean postExists(Long postId);
 //    List<CommentsEntity> findCommentsByPostId(Long postId);

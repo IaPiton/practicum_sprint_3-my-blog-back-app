@@ -7,13 +7,13 @@ import ru.yandex.practicum.my_blog_back_app.api.dto.response.PostPreview;
 import ru.yandex.practicum.my_blog_back_app.api.dto.response.PostResponse;
 import ru.yandex.practicum.my_blog_back_app.persistence.entity.PostEntity;
 import ru.yandex.practicum.my_blog_back_app.persistence.entity.TagEntity;
-import ru.yandex.practicum.my_blog_back_app.persistence.repository.CommentRepository;
+//import ru.yandex.practicum.my_blog_back_app.persistence.old.CommentRepository;
 
 
 @Component
 @RequiredArgsConstructor
 public class PostMapper {
-    private final CommentRepository commentRepository;
+//    private final CommentRepository commentRepository;
 
     public PostResponse toResponse(PostEntity postEntity) {
         return PostResponse.builder()

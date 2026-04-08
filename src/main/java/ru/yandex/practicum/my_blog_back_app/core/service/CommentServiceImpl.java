@@ -1,17 +1,5 @@
 package ru.yandex.practicum.my_blog_back_app.core.service;
 
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-import ru.yandex.practicum.my_blog_back_app.api.dto.request.CommentCreateRequest;
-import ru.yandex.practicum.my_blog_back_app.api.dto.request.CommentUpdateRequest;
-import ru.yandex.practicum.my_blog_back_app.api.dto.response.CommentResponse;
-import ru.yandex.practicum.my_blog_back_app.api.handler.EntityNotFoundException;
-import ru.yandex.practicum.my_blog_back_app.persistence.entity.CommentsEntity;
-import ru.yandex.practicum.my_blog_back_app.persistence.mapper.CommentMapper;
-import ru.yandex.practicum.my_blog_back_app.persistence.repository.CommentRepository;
-
-import java.util.List;
-
 //@Service
 //@RequiredArgsConstructor
 public class CommentServiceImpl implements CommentService {

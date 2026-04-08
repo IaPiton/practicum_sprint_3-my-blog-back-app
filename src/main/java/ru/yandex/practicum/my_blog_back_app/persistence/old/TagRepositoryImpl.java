@@ -1,17 +1,8 @@
-package ru.yandex.practicum.my_blog_back_app.persistence.repository;
-
-import lombok.RequiredArgsConstructor;
-import org.springframework.jdbc.core.simple.JdbcClient;
-import org.springframework.stereotype.Component;
-import ru.yandex.practicum.my_blog_back_app.persistence.entity.PostEntity;
-import ru.yandex.practicum.my_blog_back_app.persistence.entity.TagEntity;
-
-import java.util.List;
-import java.util.Optional;
+package ru.yandex.practicum.my_blog_back_app.persistence.old;
 
 //@Component
 //@RequiredArgsConstructor
-public class TagRepositoryImpl implements TagRepository {
+public class TagRepositoryImpl implements ru.yandex.practicum.my_blog_back_app.persistence.old.repository.TagRepositoryOld {
 //    private final JdbcClient jdbcClient;
 //
 //    @Override

@@ -1,17 +1,8 @@
-package ru.yandex.practicum.my_blog_back_app.persistence.repository;
-
-import lombok.RequiredArgsConstructor;
-import org.springframework.jdbc.core.simple.JdbcClient;
-import org.springframework.stereotype.Component;
-import ru.yandex.practicum.my_blog_back_app.persistence.entity.PostEntity;
-
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Optional;
+package ru.yandex.practicum.my_blog_back_app.persistence.old;
 
 //@Component
 //@RequiredArgsConstructor
-public class PostRepositoryImpl implements PostRepository {
+public class PostRepositoryImpl  {
 //    private final JdbcClient jdbcClient;
 //
 //    @Override
