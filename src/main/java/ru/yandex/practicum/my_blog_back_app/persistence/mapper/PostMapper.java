@@ -7,13 +7,13 @@ import ru.yandex.practicum.my_blog_back_app.api.dto.response.PostPreview;
 import ru.yandex.practicum.my_blog_back_app.api.dto.response.PostResponse;
 import ru.yandex.practicum.my_blog_back_app.persistence.entity.PostEntity;
 import ru.yandex.practicum.my_blog_back_app.persistence.entity.TagEntity;
-//import ru.yandex.practicum.my_blog_back_app.persistence.old.CommentRepository;
+import ru.yandex.practicum.my_blog_back_app.persistence.repository.CommentRepository;
 
 
 @Component
 @RequiredArgsConstructor
 public class PostMapper {
-//    private final CommentRepository commentRepository;
+    private final CommentRepository commentRepository;
 
     public PostResponse toResponse(PostEntity postEntity) {
         return PostResponse.builder()
@@ -22,7 +22,7 @@ public class PostMapper {
                 .text(postEntity.getText())
                 .likesCount(postEntity.getLikesCount())
                 .tags(postEntity.getTags().stream().map(TagEntity::getName).toList())
-//                .commentsCount(commentRepository.countCommentsByPost(postEntity.getId()))
+                .commentsCount(commentRepository.countCommentsByPost(postEntity.getId()))
                 .image(postEntity.getImage())
                 .build();
     }
@@ -34,7 +34,7 @@ public class PostMapper {
                 .text(truncatedText)
                 .tags(postEntity.getTags().stream().map(TagEntity::getName).toList())
                 .likesCount(postEntity.getLikesCount())
-//                .commentsCount(commentRepository.countCommentsByPost(postEntity.getId()))
+                .commentsCount(commentRepository.countCommentsByPost(postEntity.getId()))
                 .build();
     }
 

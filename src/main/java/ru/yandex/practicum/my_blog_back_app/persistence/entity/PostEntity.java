@@ -26,17 +26,16 @@ public class PostEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
+    @Column(name ="title", nullable = false)
     private String title;
 
-    @Column(nullable = false, columnDefinition = "TEXT")
+    @Column(name ="text", nullable = false, columnDefinition = "TEXT")
     private String text;
 
     @Column(name = "likes_count", nullable = false)
     private Long likesCount = 0L;
 
-    @Lob
-    @Column(columnDefinition = "BYTEA")
+    @Column(name = "image", columnDefinition = "BYTEA")
     private byte[] image;
 
     @CreationTimestamp
