@@ -1,13 +1,21 @@
 package ru.yandex.practicum.my_blog_back_app.persistence.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
+
+import java.util.HashSet;
+import java.util.Set;
 
 
 @Entity
-@Setter
 @Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 @Table(name = "tags", schema = "blog")
 public class TagEntity {
 
@@ -15,9 +23,10 @@ public class TagEntity {
         @GeneratedValue(strategy = GenerationType.IDENTITY)
         private Long id;
 
-        @Column(name = "name", nullable = false, unique = true, length = 100)
+        @Column(nullable = false, unique = true, length = 100)
         private String name;
 
-        @Column(name = "post_id")
-        private Long postId;
+        @ManyToMany(mappedBy = "tags")
+        @JsonIgnore
+        private Set<PostEntity> posts = new HashSet<>();
 }

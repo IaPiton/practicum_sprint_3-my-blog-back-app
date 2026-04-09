@@ -1,4 +1,7 @@
 # Файлы, игнорируемые по умолчанию
 /shelf/
 /.idea/*
+gradlew
+gradlew.bat
+
 

@@ -1,13 +1,12 @@
 package ru.yandex.practicum.my_blog_back_app.persistence.repository;
 
-import ru.yandex.practicum.my_blog_back_app.persistence.entity.PostEntity;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
 import ru.yandex.practicum.my_blog_back_app.persistence.entity.TagEntity;
 
-import java.util.List;
+import java.util.Optional;
 
-public interface TagRepository {
-    List<TagEntity> getTags(List<String> tags);
-    void saveTagsAndPost(PostEntity postEntity);
-    List<TagEntity> findTagsByPostId(Long postId);
-    void deleteTagAndPost(Long postId);
+@Repository
+public interface TagRepository extends JpaRepository<TagEntity, Long> {
+    Optional<TagEntity> findByName(String tag);
 }
