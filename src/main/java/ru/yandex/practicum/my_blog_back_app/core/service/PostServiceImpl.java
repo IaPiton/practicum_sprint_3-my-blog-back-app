@@ -2,6 +2,7 @@ package ru.yandex.practicum.my_blog_back_app.core.service;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import ru.yandex.practicum.my_blog_back_app.api.dto.request.PostCreateRequest;
 import ru.yandex.practicum.my_blog_back_app.api.dto.request.PostUpdateRequest;
 import ru.yandex.practicum.my_blog_back_app.api.dto.response.PostListResponse;
@@ -22,6 +23,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
+@Transactional
 @RequiredArgsConstructor
 public class PostServiceImpl implements PostService {
     private final PostRepository postRepository;
@@ -29,6 +31,7 @@ public class PostServiceImpl implements PostService {
     private final PostMapper postMapper;
 
     @Override
+    @Transactional(readOnly = true)
     public PostListResponse getPosts(String search, int pageNumber, int pageSize) {
 
         SearchCriteria criteria = parseSearchString(search);
@@ -66,6 +69,7 @@ public class PostServiceImpl implements PostService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public PostResponse getPostById(Long postId) {
         return postMapper.toResponse(postRepository.findById(postId)
                 .orElseThrow(EntityNotFoundException::new));
@@ -125,6 +129,7 @@ public class PostServiceImpl implements PostService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public byte[] getPostImage(Long postId) {
         PostEntity postEntity = postRepository.findById(postId).orElseThrow(EntityNotFoundException::new);
         return postEntity.getImage();

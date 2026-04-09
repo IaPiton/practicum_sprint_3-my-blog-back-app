@@ -19,8 +19,7 @@ import ru.yandex.practicum.my_blog_back_app.persistence.entity.TagEntity;
 import ru.yandex.practicum.my_blog_back_app.persistence.repository.PostRepository;
 import ru.yandex.practicum.my_blog_back_app.persistence.repository.TagRepository;
 
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -44,8 +43,8 @@ class PostServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        TagEntity testTag1 = new TagEntity(null, "spring", null);
-        TagEntity testTag2 = new TagEntity(null, "java", null);
+        TagEntity testTag1 = new TagEntity(null, "spring", new HashSet<>());
+        TagEntity testTag2 = new TagEntity(null, "java", new HashSet<>());
         testTag1 = tagRepository.save(testTag1);
         testTag2 = tagRepository.save(testTag2);
 
@@ -55,7 +54,12 @@ class PostServiceImplTest {
                 "Добавим еще текста, чтобы точно превысить лимит в 128 символов. " +
                 "Вот теперь точно хватит для проверки.");
         testPost.setLikesCount(0L);
-        testPost.setTags(Set.of(testTag1, testTag2));
+
+        Set<TagEntity> tags = new HashSet<>();
+        tags.add(testTag1);
+        tags.add(testTag2);
+        testPost.setTags(tags);
+
         testPost = postRepository.save(testPost);
     }
 
@@ -71,6 +75,7 @@ class PostServiceImplTest {
                 post.setTitle("Пост " + i);
                 post.setText("Содержимое поста " + i);
                 post.setLikesCount(0L);
+                post.setTags(new HashSet<>());
                 postRepository.save(post);
             }
 
@@ -90,7 +95,7 @@ class PostServiceImplTest {
 
             assertThat(result).isNotNull();
             assertThat(result.getPosts()).isNotEmpty();
-            assertThat(result.getPosts().get(0).getTitle()).contains("Spring");
+            assertThat(result.getPosts().getFirst().getTitle()).contains("Spring");
         }
 
         @Test
@@ -131,7 +136,7 @@ class PostServiceImplTest {
             assertThat(result).isNotNull();
             assertThat(result.getPosts()).isNotEmpty();
 
-            PostPreview preview = result.getPosts().get(0);
+            PostPreview preview = result.getPosts().getFirst();
             assertThat(preview.getText()).isNotNull();
             assertThat(preview.getText().length()).isLessThanOrEqualTo(131);
         }
@@ -170,7 +175,7 @@ class PostServiceImplTest {
             PostCreateRequest request = PostCreateRequest.builder()
                     .title("Новый пост")
                     .text("Содержимое нового поста")
-                    .tags(List.of("spring", "newtag", "test"))
+                    .tags(new ArrayList<>(List.of("spring", "newtag", "test")))
                     .build();
 
             PostResponse result = postService.createPost(request);
@@ -181,7 +186,7 @@ class PostServiceImplTest {
             assertThat(result.getText()).isEqualTo("Содержимое нового поста");
             assertThat(result.getTags()).containsExactlyInAnyOrder("spring", "newtag", "test");
 
-             PostEntity savedPost = postRepository.findById(result.getId()).orElse(null);
+            PostEntity savedPost = postRepository.findById(result.getId()).orElse(null);
             assertThat(savedPost).isNotNull();
             assertThat(savedPost.getTitle()).isEqualTo("Новый пост");
 
@@ -195,7 +200,7 @@ class PostServiceImplTest {
             PostCreateRequest request = PostCreateRequest.builder()
                     .title("Пост без тегов")
                     .text("Содержимое поста без тегов")
-                    .tags(List.of())
+                    .tags(new ArrayList<>())
                     .build();
 
             PostResponse result = postService.createPost(request);
@@ -216,7 +221,7 @@ class PostServiceImplTest {
                     .id(testPost.getId())
                     .title("Обновленный заголовок")
                     .text("Обновленное содержимое")
-                    .tags(List.of("updated", "java"))
+                    .tags(new ArrayList<>(List.of("updated", "java")))
                     .build();
 
             PostResponse result = postService.updatePost(request);
@@ -240,7 +245,7 @@ class PostServiceImplTest {
                     .id(99999L)
                     .title("Несуществующий пост")
                     .text("Содержимое")
-                    .tags(List.of())
+                    .tags(new ArrayList<>())
                     .build();
 
             assertThatThrownBy(() -> postService.updatePost(request))
@@ -291,12 +296,14 @@ class PostServiceImplTest {
             post2.setTitle("Второй пост");
             post2.setText("Содержимое");
             post2.setLikesCount(0L);
+            post2.setTags(new HashSet<>());
             post2 = postRepository.save(post2);
 
             PostEntity post3 = new PostEntity();
             post3.setTitle("Третий пост");
             post3.setText("Содержимое");
             post3.setLikesCount(0L);
+            post3.setTags(new HashSet<>());
             post3 = postRepository.save(post3);
 
             postService.deletePost(testPost.getId());
@@ -387,16 +394,25 @@ class PostServiceImplTest {
         @Test
         @DisplayName("Должен обновить изображение несколько раз")
         void shouldUpdateImageMultipleTimes() {
+            PostEntity isolatedPost = new PostEntity();
+            isolatedPost.setTitle("Изолированный пост для теста изображений");
+            isolatedPost.setText("Содержимое изолированного поста");
+            isolatedPost.setLikesCount(0L);
+            isolatedPost.setTags(new HashSet<>());
+            isolatedPost = postRepository.save(isolatedPost);
+
             byte[] firstImage = "first".getBytes();
             byte[] secondImage = "second".getBytes();
 
-            postService.updatePostImage(testPost.getId(), firstImage);
-            byte[] retrievedFirst = postService.getPostImage(testPost.getId());
+            postService.updatePostImage(isolatedPost.getId(), firstImage);
+            byte[] retrievedFirst = postService.getPostImage(isolatedPost.getId());
             assertThat(retrievedFirst).isEqualTo(firstImage);
 
-            postService.updatePostImage(testPost.getId(), secondImage);
-            byte[] retrievedSecond = postService.getPostImage(testPost.getId());
+            postService.updatePostImage(isolatedPost.getId(), secondImage);
+            byte[] retrievedSecond = postService.getPostImage(isolatedPost.getId());
             assertThat(retrievedSecond).isEqualTo(secondImage);
+
+            postRepository.delete(isolatedPost);
         }
     }
 
@@ -410,7 +426,7 @@ class PostServiceImplTest {
             PostCreateRequest createRequest = PostCreateRequest.builder()
                     .title("CRUD Тест пост")
                     .text("Содержимое CRUD теста")
-                    .tags(List.of("crud", "test"))
+                    .tags(new ArrayList<>(List.of("crud", "test")))
                     .build();
 
             PostResponse created = postService.createPost(createRequest);
@@ -424,7 +440,7 @@ class PostServiceImplTest {
                     .id(postId)
                     .title("Обновленный CRUD пост")
                     .text("Обновленное содержимое")
-                    .tags(List.of("updated"))
+                    .tags(new ArrayList<>(List.of("updated")))
                     .build();
 
             PostResponse updated = postService.updatePost(updateRequest);
@@ -442,22 +458,22 @@ class PostServiceImplTest {
         @Test
         @DisplayName("Должен корректно обработать поиск с разными комбинациями параметров")
         void shouldHandleDifferentSearchCombinations() {
-             PostCreateRequest post1 = PostCreateRequest.builder()
+            PostCreateRequest post1 = PostCreateRequest.builder()
                     .title("Java пост")
                     .text("О Java")
-                    .tags(List.of("java"))
+                    .tags(new ArrayList<>(List.of("java")))
                     .build();
 
             PostCreateRequest post2 = PostCreateRequest.builder()
                     .title("Spring пост")
                     .text("О Spring")
-                    .tags(List.of("spring"))
+                    .tags(new ArrayList<>(List.of("spring")))
                     .build();
 
             PostCreateRequest post3 = PostCreateRequest.builder()
                     .title("Java и Spring")
                     .text("О Java и Spring")
-                    .tags(List.of("java", "spring"))
+                    .tags(new ArrayList<>(List.of("java", "spring")))
                     .build();
 
             postService.createPost(post1);
