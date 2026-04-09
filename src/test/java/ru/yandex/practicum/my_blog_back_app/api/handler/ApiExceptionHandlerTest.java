@@ -40,6 +40,8 @@ class ApiExceptionHandlerTest {
 
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
             assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody().getError()).isEqualTo("BAD_REQUEST");
+            assertThat(response.getBody().getMessage()).isEqualTo(ERROR_MESSAGE);
         }
 
         @Test
@@ -51,6 +53,8 @@ class ApiExceptionHandlerTest {
 
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
             assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody().getError()).isEqualTo("BAD_REQUEST");
+            assertThat(response.getBody().getMessage()).isNull();
         }
 
         @Test
@@ -62,8 +66,35 @@ class ApiExceptionHandlerTest {
 
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
             assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody().getError()).isEqualTo("BAD_REQUEST");
+            assertThat(response.getBody().getMessage()).isNull();
+        }
+    }
+
+    @Nested
+    @DisplayName("Тесты для EntityNotFoundException")
+    class EntityNotFoundExceptionTests {
+
+        @Test
+        @DisplayName("Должен обработать EntityNotFoundException и вернуть BAD_REQUEST с сообщением о ненайденной записи")
+        void shouldHandleEntityNotFoundExceptionAndReturnBadRequest() {
+            ResponseEntity<ErrorResponse> response = exceptionHandler.EntityNotFound();
+
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+            assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody().getError()).isEqualTo("BAD_REQUEST");
+            assertThat(response.getBody().getMessage()).isEqualTo("Запись не найднен");
         }
 
+        @Test
+        @DisplayName("Должен возвращать одинаковый ответ при любом EntityNotFoundException")
+        void shouldReturnSameResponseForAnyEntityNotFoundException() {
+            ResponseEntity<ErrorResponse> response1 = exceptionHandler.EntityNotFound();
+            ResponseEntity<ErrorResponse> response2 = exceptionHandler.EntityNotFound();
+
+            assertThat(response1.getBody().getError()).isEqualTo(response2.getBody().getError());
+            assertThat(response1.getBody().getMessage()).isEqualTo(response2.getBody().getMessage());
+        }
     }
 
     @Nested
@@ -79,6 +110,8 @@ class ApiExceptionHandlerTest {
 
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
             assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody().getError()).isEqualTo("BAD_REQUEST");
+            assertThat(response.getBody().getMessage()).isEqualTo(ERROR_MESSAGE);
         }
 
         @Test
@@ -91,6 +124,8 @@ class ApiExceptionHandlerTest {
 
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
             assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody().getError()).isEqualTo("BAD_REQUEST");
+            assertThat(response.getBody().getMessage()).isEqualTo(invalidFormatMessage);
         }
 
         @Test
@@ -103,6 +138,21 @@ class ApiExceptionHandlerTest {
 
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
             assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody().getError()).isEqualTo("BAD_REQUEST");
+            assertThat(response.getBody().getMessage()).isEqualTo(sizeMessage);
+        }
+
+        @Test
+        @DisplayName("Должен обработать InvalidImageException с пустым сообщением")
+        void shouldHandleInvalidImageExceptionWithEmptyMessage() {
+            InvalidImageException exception = new InvalidImageException("");
+
+            ResponseEntity<ErrorResponse> response = exceptionHandler.handleInvalidImage(exception);
+
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+            assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody().getError()).isEqualTo("BAD_REQUEST");
+            assertThat(response.getBody().getMessage()).isEmpty();
         }
     }
 
@@ -113,37 +163,35 @@ class ApiExceptionHandlerTest {
         @Test
         @DisplayName("Должен обработать RuntimeException и вернуть INTERNAL_SERVER_ERROR с общим сообщением")
         void shouldHandleRuntimeExceptionAndReturnInternalServerError() {
-            new RuntimeException("Some internal error");
-
             ResponseEntity<ErrorResponse> response = exceptionHandler.handleInternalError();
 
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
             assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody().getError()).isEqualTo("INTERNAL_SERVER");
+            assertThat(response.getBody().getMessage()).isEqualTo("Произошла непредвиденная ошибка");
         }
 
         @Test
         @DisplayName("Должен скрыть детали внутренней ошибки от клиента")
         void shouldHideInternalErrorDetailsFromClient() {
-
-            new RuntimeException("Database connection failed with sensitive details");
-
             ResponseEntity<ErrorResponse> response = exceptionHandler.handleInternalError();
 
-            Assertions.assertNotNull(response.getBody());
+            assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody().getError()).isEqualTo("INTERNAL_SERVER");
             assertThat(response.getBody().getMessage()).isEqualTo("Произошла непредвиденная ошибка");
             assertThat(response.getBody().getMessage()).doesNotContain("Database");
             assertThat(response.getBody().getMessage()).doesNotContain("sensitive");
+            assertThat(response.getBody().getMessage()).doesNotContain("connection");
         }
 
         @Test
-        @DisplayName("Должен обработать NullPointerException как RuntimeException")
-        void shouldHandleNullPointerExceptionAsRuntimeException() {
+        @DisplayName("Должен возвращать одинаковый ответ для любых RuntimeException")
+        void shouldReturnSameResponseForAnyRuntimeException() {
+            ResponseEntity<ErrorResponse> response1 = exceptionHandler.handleInternalError();
+            ResponseEntity<ErrorResponse> response2 = exceptionHandler.handleInternalError();
 
-            new NullPointerException();
-
-            ResponseEntity<ErrorResponse> response = exceptionHandler.handleInternalError();
-
-            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+            assertThat(response1.getBody().getError()).isEqualTo(response2.getBody().getError());
+            assertThat(response1.getBody().getMessage()).isEqualTo(response2.getBody().getMessage());
         }
     }
 
@@ -173,6 +221,7 @@ class ApiExceptionHandlerTest {
 
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
             assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody().getError()).isEqualTo("BAD_REQUEST");
             assertThat(response.getBody().getMessage()).isEqualTo(errorMessage);
         }
 
@@ -191,6 +240,7 @@ class ApiExceptionHandlerTest {
 
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
             assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody().getError()).isEqualTo("BAD_REQUEST");
             assertThat(response.getBody().getMessage()).isEqualTo(
                     "Название поста не может быть пустым, Содержание поста не может быть пустым"
             );
@@ -206,6 +256,7 @@ class ApiExceptionHandlerTest {
 
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
             assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody().getError()).isEqualTo("BAD_REQUEST");
             assertThat(response.getBody().getMessage()).isEqualTo("Title is required");
         }
 
@@ -218,15 +269,16 @@ class ApiExceptionHandlerTest {
 
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
             assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody().getError()).isEqualTo("BAD_REQUEST");
             assertThat(response.getBody().getMessage()).isEmpty();
         }
 
         @Test
         @DisplayName("Должен обработать ошибки валидации с null сообщениями")
         void shouldHandleValidationErrorsWithNullMessages() {
-            ObjectError error1 = new ObjectError("Test", null);
+            ObjectError error1 = new ObjectError("Test",  null);
             ObjectError error2 = new ObjectError("Test", "Valid message");
-            ObjectError error3 = new ObjectError("Test", null);
+            ObjectError error3 = new ObjectError("Test",  null);
 
             when(bindingResult.getAllErrors()).thenReturn(List.of(error1, error2, error3));
 
@@ -234,8 +286,118 @@ class ApiExceptionHandlerTest {
 
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
             assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody().getError()).isEqualTo("BAD_REQUEST");
             assertThat(response.getBody().getMessage()).isEqualTo("null, Valid message, null");
+        }
+
+        @Test
+        @DisplayName("Должен обработать большое количество ошибок валидации")
+        void shouldHandleManyValidationErrors() {
+            List<ObjectError> errors = List.of(
+                    new ObjectError("Test", "Ошибка 1"),
+                    new ObjectError("Test", "Ошибка 2"),
+                    new ObjectError("Test", "Ошибка 3"),
+                    new ObjectError("Test", "Ошибка 4"),
+                    new ObjectError("Test", "Ошибка 5")
+            );
+            when(bindingResult.getAllErrors()).thenReturn(errors);
+
+            ResponseEntity<ErrorResponse> response = exceptionHandler.handleBadRequest(exception);
+
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+            assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody().getError()).isEqualTo("BAD_REQUEST");
+            assertThat(response.getBody().getMessage()).contains("Ошибка 1");
+            assertThat(response.getBody().getMessage()).contains("Ошибка 5");
         }
     }
 
+    @Nested
+    @DisplayName("Тесты обработки общих исключений")
+    class GeneralExceptionTests {
+
+        @Test
+        @DisplayName("Должен обработать необработанное исключение как INTERNAL_SERVER_ERROR")
+        void shouldHandleUnhandledExceptionAsInternalServerError() {
+            ResponseEntity<ErrorResponse> response = exceptionHandler.handleInternalError();
+
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+            assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody().getError()).isEqualTo("INTERNAL_SERVER");
+            assertThat(response.getBody().getMessage()).isEqualTo("Произошла непредвиденная ошибка");
+        }
+
+        @Test
+        @DisplayName("Должен возвращать корректную структуру ErrorResponse для всех исключений")
+        void shouldReturnCorrectErrorResponseStructureForAllExceptions() {
+            IllegalArgumentException illegalArgEx = new IllegalArgumentException("Test");
+            ResponseEntity<ErrorResponse> response1 = exceptionHandler.handleBadRequest(illegalArgEx);
+
+            assertThat(response1.getBody()).isInstanceOf(ErrorResponse.class);
+            assertThat(response1.getBody().getError()).isNotBlank();
+            assertThat(response1.getBody().getMessage()).isEqualTo("Test");
+
+            ResponseEntity<ErrorResponse> response2 = exceptionHandler.EntityNotFound();
+
+            assertThat(response2.getBody()).isInstanceOf(ErrorResponse.class);
+            assertThat(response2.getBody().getError()).isEqualTo("BAD_REQUEST");
+            assertThat(response2.getBody().getMessage()).isEqualTo("Запись не найднен");
+
+            ResponseEntity<ErrorResponse> response3 = exceptionHandler.handleInternalError();
+
+            assertThat(response3.getBody()).isInstanceOf(ErrorResponse.class);
+            assertThat(response3.getBody().getError()).isEqualTo("INTERNAL_SERVER");
+            assertThat(response3.getBody().getMessage()).isEqualTo("Произошла непредвиденная ошибка");
+        }
+
+        @Test
+        @DisplayName("Должен корректно обрабатывать все HTTP статусы")
+        void shouldHandleAllHttpStatusesCorrectly() {
+            ResponseEntity<ErrorResponse> response1 = exceptionHandler.handleBadRequest(new IllegalArgumentException());
+            assertThat(response1.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+
+            ResponseEntity<ErrorResponse> response2 = exceptionHandler.EntityNotFound();
+            assertThat(response2.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+
+            ResponseEntity<ErrorResponse> response3 = exceptionHandler.handleInvalidImage(new InvalidImageException(""));
+            assertThat(response3.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+
+            MethodArgumentNotValidException mockException = mock(MethodArgumentNotValidException.class);
+            when(mockException.getBindingResult()).thenReturn(mock(BindingResult.class));
+            when(mockException.getBindingResult().getAllErrors()).thenReturn(List.of());
+            ResponseEntity<ErrorResponse> response4 = exceptionHandler.handleBadRequest(mockException);
+            assertThat(response4.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+
+            ResponseEntity<ErrorResponse> response5 = exceptionHandler.handleInternalError();
+            assertThat(response5.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+
+        @Test
+        @DisplayName("Должен правильно устанавливать поле error в ErrorResponse")
+        void shouldCorrectlySetErrorFieldInErrorResponse() {
+            ResponseEntity<ErrorResponse> badRequestResponse = exceptionHandler.handleBadRequest(new IllegalArgumentException("test"));
+            assertThat(badRequestResponse.getBody().getError()).isEqualTo("BAD_REQUEST");
+
+            ResponseEntity<ErrorResponse> internalErrorResponse = exceptionHandler.handleInternalError();
+            assertThat(internalErrorResponse.getBody().getError()).isEqualTo("INTERNAL_SERVER");
+        }
+
+        @Test
+        @DisplayName("Должен правильно устанавливать поле message в ErrorResponse")
+        void shouldCorrectlySetMessageFieldInErrorResponse() {
+            String testMessage = "Тестовое сообщение об ошибке";
+
+            ResponseEntity<ErrorResponse> response1 = exceptionHandler.handleBadRequest(new IllegalArgumentException(testMessage));
+            assertThat(response1.getBody().getMessage()).isEqualTo(testMessage);
+
+            ResponseEntity<ErrorResponse> response2 = exceptionHandler.EntityNotFound();
+            assertThat(response2.getBody().getMessage()).isEqualTo("Запись не найднен");
+
+            ResponseEntity<ErrorResponse> response3 = exceptionHandler.handleInvalidImage(new InvalidImageException(testMessage));
+            assertThat(response3.getBody().getMessage()).isEqualTo(testMessage);
+
+            ResponseEntity<ErrorResponse> response4 = exceptionHandler.handleInternalError();
+            assertThat(response4.getBody().getMessage()).isEqualTo("Произошла непредвиденная ошибка");
+        }
+    }
 }

@@ -34,15 +34,13 @@ public class PostServiceImpl implements PostService {
         SearchCriteria criteria = parseSearchString(search);
         int offset = (pageNumber - 1) * pageSize;
         List<PostEntity> posts;
-        try {
-            if (criteria.getTags() == null || criteria.getTags().isEmpty()) {
-                posts = postRepository.findPostsWithFiltersNoTags(criteria.getTitleSubstring(), offset, pageSize);
-            } else {
-                posts = postRepository.findPostsWithFiltersWithTags(criteria.getTitleSubstring(), criteria.getTags(), offset, pageSize);
-            }
-        } catch (Exception e) {
-            throw new RuntimeException(e);
+
+        if (criteria.getTags() == null || criteria.getTags().isEmpty()) {
+            posts = postRepository.findPostsWithFiltersNoTags(criteria.getTitleSubstring(), offset, pageSize);
+        } else {
+            posts = postRepository.findPostsWithFiltersWithTags(criteria.getTitleSubstring(), criteria.getTags(), offset, pageSize);
         }
+
 
         int totalPosts;
         if (criteria.getTags() == null || criteria.getTags().isEmpty()) {
@@ -91,13 +89,16 @@ public class PostServiceImpl implements PostService {
     @Override
     public PostResponse updatePost(PostUpdateRequest request) {
         PostEntity postEntity = postRepository.findById(request.getId()).orElseThrow(EntityNotFoundException::new);
-        Set<TagEntity> tags = request.getTags().stream()
-                .map(tag -> tagRepository.findByName(tag)
-                        .orElseGet(() -> tagRepository.save(new TagEntity(null, tag, null))))
-                .collect(Collectors.toSet());
+        Set<TagEntity> tags;
+        if (request.getTags() != null) {
+            tags = request.getTags().stream()
+                    .map(tag -> tagRepository.findByName(tag)
+                            .orElseGet(() -> tagRepository.save(new TagEntity(null, tag, null))))
+                    .collect(Collectors.toSet());
+            postEntity.setTags(tags);
+        }
         postEntity.setTitle(request.getTitle());
         postEntity.setText(request.getText());
-        postEntity.setTags(tags);
         postEntity = postRepository.save(postEntity);
         return postMapper.toResponse(postEntity);
 

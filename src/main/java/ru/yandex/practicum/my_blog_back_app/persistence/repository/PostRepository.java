@@ -1,12 +1,9 @@
 package ru.yandex.practicum.my_blog_back_app.persistence.repository;
 
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
-import ru.yandex.practicum.my_blog_back_app.core.model.PostDTO;
-import ru.yandex.practicum.my_blog_back_app.persistence.entity.CommentEntity;
 import ru.yandex.practicum.my_blog_back_app.persistence.entity.PostEntity;
 
 import java.util.List;
@@ -33,7 +30,7 @@ public interface PostRepository extends JpaRepository<PostEntity, Long> {
             LEFT JOIN blog.post_tags pt ON p.id = pt.post_id
             LEFT JOIN blog.tags t ON pt.tag_id = t.id
             WHERE (:titleSubstring IS NULL OR :titleSubstring = '' OR LOWER(p.title) LIKE LOWER(CONCAT('%', :titleSubstring, '%')))
-            AND t.name IN (:tags)
+            AND LOWER(t.name) IN (LOWER(:tags))
             ORDER BY p.create_at DESC
             OFFSET :offset LIMIT :limit
             """, nativeQuery = true)
@@ -61,7 +58,7 @@ public interface PostRepository extends JpaRepository<PostEntity, Long> {
             LEFT JOIN blog.post_tags pt ON p.id = pt.post_id
             LEFT JOIN blog.tags t ON pt.tag_id = t.id
             WHERE (:titleSubstring IS NULL OR :titleSubstring = '' OR LOWER(p.title) LIKE LOWER(CONCAT('%', :titleSubstring, '%')))
-            AND t.name IN (:tags)
+            AND LOWER(t.name) IN (LOWER(:tags))
             """, nativeQuery = true)
     Integer findCountPostsWithFiltersWithTags(
             @Param("titleSubstring") String titleSubstring,

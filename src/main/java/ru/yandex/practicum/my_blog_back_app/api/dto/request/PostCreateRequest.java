@@ -17,7 +17,6 @@ public class PostCreateRequest {
     @NotBlank(message = "Text пустой")
     private String text;
 
-    @NotNull(message = "Tags не может быть пустым")
     @NotEmpty(message = "Tags не может быть пустым")
     private List<String> tags;
 }
