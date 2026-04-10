@@ -37,6 +37,7 @@ public class PostController {
         if (pageSize < 1) {
             pageSize = 5;
         }
+
         return ResponseEntity.ok(postService.getPosts(search, pageNumber, pageSize));
     }
 

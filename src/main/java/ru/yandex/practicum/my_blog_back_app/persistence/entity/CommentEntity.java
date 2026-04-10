@@ -1,30 +1,37 @@
 package ru.yandex.practicum.my_blog_back_app.persistence.entity;
 
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.Setter;
+
+import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
 
 @Entity
-@Setter
 @Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 @Table(name = "comments", schema = "blog")
-public class CommentsEntity {
+public class CommentEntity {
 
         @Id
         @GeneratedValue(strategy = GenerationType.IDENTITY)
         private Long id;
 
-        @Column(name = "text", nullable = false, columnDefinition = "TEXT")
+        @Column(nullable = false, columnDefinition = "TEXT")
         private String text;
 
-        @Column(name = "post_id", nullable = false)
-        private Long postId;
+        @ManyToOne(fetch = FetchType.LAZY)
+        @JoinColumn(name = "post_id", nullable = false)
+        private PostEntity post;
 
+        @CreationTimestamp
         @Column(name = "create_at", nullable = false, updatable = false)
         private LocalDateTime createAt;
 
+        @UpdateTimestamp
         @Column(name = "update_at", nullable = false)
         private LocalDateTime updateAt;
 }

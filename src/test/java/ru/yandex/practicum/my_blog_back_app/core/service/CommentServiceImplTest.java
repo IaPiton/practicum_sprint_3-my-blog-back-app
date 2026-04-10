@@ -4,59 +4,59 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.transaction.annotation.Transactional;
 import ru.yandex.practicum.my_blog_back_app.api.dto.request.CommentCreateRequest;
 import ru.yandex.practicum.my_blog_back_app.api.dto.request.CommentUpdateRequest;
 import ru.yandex.practicum.my_blog_back_app.api.dto.response.CommentResponse;
 import ru.yandex.practicum.my_blog_back_app.api.handler.EntityNotFoundException;
-import ru.yandex.practicum.my_blog_back_app.persistence.entity.CommentsEntity;
-import ru.yandex.practicum.my_blog_back_app.persistence.mapper.CommentMapper;
+import ru.yandex.practicum.my_blog_back_app.persistence.entity.CommentEntity;
+import ru.yandex.practicum.my_blog_back_app.persistence.entity.PostEntity;
 import ru.yandex.practicum.my_blog_back_app.persistence.repository.CommentRepository;
+import ru.yandex.practicum.my_blog_back_app.persistence.repository.PostRepository;
 
 import java.util.List;
-import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
 
-@ExtendWith(MockitoExtension.class)
-@DisplayName("Тесты сервиса комментариев")
+@Transactional
+@SpringBootTest
+@ActiveProfiles("test")
+@DisplayName("Интеграционные тесты сервиса комментариев с реальной БД")
 class CommentServiceImplTest {
 
-    @Mock
+    @Autowired
+    private CommentService commentService;
+
+    @Autowired
     private CommentRepository commentRepository;
 
-    @Mock
-    private CommentMapper commentMapper;
+    @Autowired
+    private PostRepository postRepository;
 
-    @InjectMocks
-    private CommentServiceImpl commentService;
-
-    private CommentsEntity testCommentEntity;
-    private CommentResponse testCommentResponse;
+    private PostEntity testPost;
+    private CommentEntity testCommentEntity;
     private CommentCreateRequest testCreateRequest;
     private CommentUpdateRequest testUpdateRequest;
 
     @BeforeEach
     void setUp() {
-        testCommentEntity = new CommentsEntity();
-        testCommentEntity.setId(1L);
-        testCommentEntity.setPostId(100L);
-        testCommentEntity.setText("Тестовый комментарий");
+        testPost = new PostEntity();
+        testPost.setTitle("Тестовый пост");
+        testPost.setText("Содержимое тестового поста");
+        testPost.setLikesCount(0L);
+        testPost = postRepository.save(testPost);
 
-        testCommentResponse = CommentResponse.builder()
-                .id(1L)
-                .postId(100L)
-                .text("Тестовый комментарий")
-                .build();
+        testCommentEntity = new CommentEntity();
+        testCommentEntity.setPost(testPost);
+        testCommentEntity.setText("Тестовый комментарий");
+        testCommentEntity = commentRepository.save(testCommentEntity);
 
         testCreateRequest = CommentCreateRequest.builder()
-                .postId(100L)
+                .postId(testPost.getId())
                 .text("Новый комментарий")
                 .build();
 
@@ -72,30 +72,36 @@ class CommentServiceImplTest {
         @Test
         @DisplayName("Должен вернуть список комментариев по Id поста")
         void shouldReturnCommentsListByPostId() {
-            List<CommentsEntity> commentsEntities = List.of(testCommentEntity);
-            when(commentRepository.findCommentsByPostId(100L)).thenReturn(commentsEntities);
-            when(commentMapper.toResponse(testCommentEntity)).thenReturn(testCommentResponse);
-
-            List<CommentResponse> result = commentService.getCommentsByPostId(100L);
+            List<CommentResponse> result = commentService.getCommentsByPostId(testPost.getId());
 
             assertThat(result).isNotNull();
             assertThat(result).hasSize(1);
-            assertThat(result.getFirst()).isEqualTo(testCommentResponse);
-            verify(commentRepository).findCommentsByPostId(100L);
-            verify(commentMapper).toResponse(testCommentEntity);
+            assertThat(result.getFirst().getText()).isEqualTo("Тестовый комментарий");
+            assertThat(result.getFirst().getPostId()).isEqualTo(testPost.getId());
         }
 
         @Test
         @DisplayName("Должен вернуть пустой список, если у поста нет комментариев")
         void shouldReturnEmptyListWhenNoComments() {
-            when(commentRepository.findCommentsByPostId(200L)).thenReturn(List.of());
+            PostEntity newPost = new PostEntity();
+            newPost.setTitle("Пост без комментариев");
+            newPost.setText("Содержимое");
+            newPost.setLikesCount(0L);
+            newPost = postRepository.save(newPost);
 
-            List<CommentResponse> result = commentService.getCommentsByPostId(200L);
+            List<CommentResponse> result = commentService.getCommentsByPostId(newPost.getId());
 
             assertThat(result).isNotNull();
             assertThat(result).isEmpty();
-            verify(commentRepository).findCommentsByPostId(200L);
-            verify(commentMapper, never()).toResponse(any());
+        }
+
+        @Test
+        @DisplayName("Должен вернуть пустой список для несуществующего поста")
+        void shouldReturnEmptyListForNonExistentPost() {
+            List<CommentResponse> result = commentService.getCommentsByPostId(99999L);
+
+            assertThat(result).isNotNull();
+            assertThat(result).isEmpty();
         }
     }
 
@@ -106,26 +112,19 @@ class CommentServiceImplTest {
         @Test
         @DisplayName("Должен вернуть комментарий по существующему Id")
         void shouldReturnCommentById() {
-            when(commentRepository.findById(1L)).thenReturn(Optional.of(testCommentEntity));
-            when(commentMapper.toResponse(testCommentEntity)).thenReturn(testCommentResponse);
+            CommentResponse result = commentService.getCommentById(testCommentEntity.getId());
 
-            CommentResponse result = commentService.getCommentById(1L);
-
-            assertThat(result).isEqualTo(testCommentResponse);
-            verify(commentRepository).findById(1L);
-            verify(commentMapper).toResponse(testCommentEntity);
+            assertThat(result).isNotNull();
+            assertThat(result.getId()).isEqualTo(testCommentEntity.getId());
+            assertThat(result.getText()).isEqualTo("Тестовый комментарий");
+            assertThat(result.getPostId()).isEqualTo(testPost.getId());
         }
 
         @Test
         @DisplayName("Должен выбросить исключение, если комментарий не найден")
         void shouldThrowExceptionWhenCommentNotFound() {
-            when(commentRepository.findById(999L)).thenReturn(Optional.empty());
-
-            assertThatThrownBy(() -> commentService.getCommentById(999L))
+            assertThatThrownBy(() -> commentService.getCommentById(99999L))
                     .isInstanceOf(EntityNotFoundException.class);
-
-            verify(commentRepository).findById(999L);
-            verify(commentMapper, never()).toResponse(any());
         }
     }
 
@@ -136,233 +135,227 @@ class CommentServiceImplTest {
         @Test
         @DisplayName("Должен успешно создать новый комментарий")
         void shouldCreateCommentSuccessfully() {
-            Long generatedId = 5L;
-
-            when(commentRepository.save(any(CommentsEntity.class))).thenReturn(generatedId);
-            when(commentMapper.toResponse(any(CommentsEntity.class))).thenReturn(
-                    CommentResponse.builder()
-                            .id(generatedId)
-                            .postId(testCreateRequest.getPostId())
-                            .text(testCreateRequest.getText())
-                            .build()
-            );
-
             CommentResponse result = commentService.createComment(testCreateRequest);
 
             assertThat(result).isNotNull();
-            assertThat(result.getPostId()).isEqualTo(100L);
+            assertThat(result.getId()).isNotNull();
+            assertThat(result.getPostId()).isEqualTo(testPost.getId());
             assertThat(result.getText()).isEqualTo("Новый комментарий");
-            assertThat(result.getId()).isEqualTo(generatedId);
 
-            verify(commentRepository).save(any(CommentsEntity.class));
-            verify(commentMapper).toResponse(any(CommentsEntity.class));
+            CommentEntity savedComment = commentRepository.findById(result.getId()).orElse(null);
+            assertThat(savedComment).isNotNull();
+            assertThat(savedComment.getText()).isEqualTo("Новый комментарий");
+            assertThat(savedComment.getPost().getId()).isEqualTo(testPost.getId());
         }
 
         @Test
-        @DisplayName("Должен создать комментарий с корректными полями")
-        void shouldCreateCommentWithCorrectFields() {
-            when(commentRepository.save(any(CommentsEntity.class))).thenReturn(1L);
-            when(commentMapper.toResponse(any(CommentsEntity.class))).thenReturn(testCommentResponse);
+        @DisplayName("Должен выбросить исключение при создании комментария к несуществующему посту")
+        void shouldThrowExceptionWhenPostNotFound() {
+            CommentCreateRequest invalidRequest = CommentCreateRequest.builder()
+                    .postId(99999L)
+                    .text("Комментарий к несуществующему посту")
+                    .build();
 
-            commentService.createComment(testCreateRequest);
-
-            verify(commentRepository).save(argThat(entity ->
-                    entity.getPostId().equals(100L) &&
-                            "Новый комментарий".equals(entity.getText())
-            ));
+            assertThatThrownBy(() -> commentService.createComment(invalidRequest))
+                    .isInstanceOf(EntityNotFoundException.class);
         }
 
         @Test
-        @DisplayName("Должен установить правильный ID после сохранения")
-        void shouldSetCorrectIdAfterSave() {
-            Long expectedId = 10L;
-            when(commentRepository.save(any(CommentsEntity.class))).thenReturn(expectedId);
-            when(commentMapper.toResponse(any(CommentsEntity.class))).thenAnswer(invocation -> {
-                CommentsEntity entity = invocation.getArgument(0);
-                return CommentResponse.builder()
-                        .id(entity.getId())
-                        .postId(entity.getPostId())
-                        .text(entity.getText())
-                        .build();
-            });
+        @DisplayName("Должен создать комментарий с пустым текстом")
+        void shouldCreateCommentWithEmptyText() {
+            CommentCreateRequest emptyTextRequest = CommentCreateRequest.builder()
+                    .postId(testPost.getId())
+                    .text("")
+                    .build();
 
-            CommentResponse result = commentService.createComment(testCreateRequest);
+            CommentResponse result = commentService.createComment(emptyTextRequest);
 
-            assertThat(result.getId()).isEqualTo(expectedId);
-            verify(commentRepository, times(1)).save(any(CommentsEntity.class));
+            assertThat(result).isNotNull();
+            assertThat(result.getText()).isEmpty();
+        }
+    }
+
+    @Nested
+    @DisplayName("Тесты обновления комментария")
+    class UpdateCommentTests {
+
+        @Test
+        @DisplayName("Должен успешно обновить существующий комментарий")
+        void shouldUpdateCommentSuccessfully() {
+            CommentResponse result = commentService.updateComment(testCommentEntity.getId(), testUpdateRequest);
+
+            assertThat(result).isNotNull();
+            assertThat(result.getId()).isEqualTo(testCommentEntity.getId());
+            assertThat(result.getText()).isEqualTo("Обновленный комментарий");
+
+            CommentEntity updatedComment = commentRepository.findById(testCommentEntity.getId()).orElse(null);
+            assertThat(updatedComment).isNotNull();
+            assertThat(updatedComment.getText()).isEqualTo("Обновленный комментарий");
         }
 
-        @Nested
-        @DisplayName("Тесты обновления комментария")
-        class UpdateCommentTests {
-
-            @Test
-            @DisplayName("Должен успешно обновить существующий комментарий")
-            void shouldUpdateCommentSuccessfully() {
-                when(commentRepository.findById(1L)).thenReturn(Optional.of(testCommentEntity));
-                when(commentMapper.toResponse(testCommentEntity)).thenReturn(
-                        CommentResponse.builder()
-                                .id(1L)
-                                .postId(100L)
-                                .text("Обновленный комментарий")
-                                .build()
-                );
-
-                CommentResponse result = commentService.updateComment(1L, testUpdateRequest);
-
-                assertThat(result).isNotNull();
-                assertThat(result.getText()).isEqualTo("Обновленный комментарий");
-                assertThat(testCommentEntity.getText()).isEqualTo("Обновленный комментарий");
-
-                verify(commentRepository).findById(1L);
-                verify(commentRepository).update(testCommentEntity);
-                verify(commentMapper).toResponse(testCommentEntity);
-            }
-
-            @Test
-            @DisplayName("Должен выбросить исключение при обновлении несуществующего комментария")
-            void shouldThrowExceptionWhenUpdatingNonExistentComment() {
-                when(commentRepository.findById(999L)).thenReturn(Optional.empty());
-
-                assertThatThrownBy(() -> commentService.updateComment(999L, testUpdateRequest))
-                        .isInstanceOf(EntityNotFoundException.class);
-
-                verify(commentRepository).findById(999L);
-                verify(commentRepository, never()).update(any());
-            }
-
-            @Test
-            @DisplayName("Должен обновить только текст комментария, не затрагивая другие поля")
-            void shouldUpdateOnlyTextField() {
-                CommentsEntity originalComment = new CommentsEntity();
-                originalComment.setId(1L);
-                originalComment.setPostId(100L);
-                originalComment.setText("Старый текст");
-
-                when(commentRepository.findById(1L)).thenReturn(Optional.of(originalComment));
-                when(commentMapper.toResponse(any(CommentsEntity.class))).thenReturn(
-                        CommentResponse.builder()
-                                .id(1L)
-                                .postId(100L)
-                                .text("Новый текст")
-                                .build()
-                );
-
-                commentService.updateComment(1L, testUpdateRequest);
-
-                assertThat(originalComment.getText()).isEqualTo("Обновленный комментарий");
-                assertThat(originalComment.getPostId()).isEqualTo(100L);
-                assertThat(originalComment.getId()).isEqualTo(1L);
-            }
+        @Test
+        @DisplayName("Должен выбросить исключение при обновлении несуществующего комментария")
+        void shouldThrowExceptionWhenUpdatingNonExistentComment() {
+            assertThatThrownBy(() -> commentService.updateComment(99999L, testUpdateRequest))
+                    .isInstanceOf(EntityNotFoundException.class);
         }
 
-        @Nested
-        @DisplayName("Тесты удаления комментария")
-        class DeleteCommentTests {
+        @Test
+        @DisplayName("Должен обновить комментарий на пустой текст")
+        void shouldUpdateCommentToEmptyText() {
+            CommentUpdateRequest emptyTextRequest = CommentUpdateRequest.builder()
+                    .text("")
+                    .build();
 
-            @Test
-            @DisplayName("Должен успешно удалить комментарий по Id")
-            void shouldDeleteCommentById() {
-                Long commentId = 1L;
-                doNothing().when(commentRepository).deleteByCommentId(commentId);
+            CommentResponse result = commentService.updateComment(testCommentEntity.getId(), emptyTextRequest);
 
-                commentService.deleteComment(commentId);
+            assertThat(result).isNotNull();
+            assertThat(result.getText()).isEmpty();
 
-                verify(commentRepository).deleteByCommentId(commentId);
-            }
+            CommentEntity updatedComment = commentRepository.findById(testCommentEntity.getId()).orElse(null);
+            assertThat(updatedComment).isNotNull();
+            assertThat(updatedComment.getText()).isEmpty();
+        }
+    }
 
-            @Test
-            @DisplayName("При удалении несуществующего комментария не должно быть ошибки")
-            void shouldNotThrowErrorWhenDeletingNonExistentComment() {
-                Long nonExistentId = 999L;
-                doNothing().when(commentRepository).deleteByCommentId(nonExistentId);
+    @Nested
+    @DisplayName("Тесты удаления комментария")
+    class DeleteCommentTests {
 
-                commentService.deleteComment(nonExistentId);
+        @Test
+        @DisplayName("Должен успешно удалить комментарий по Id")
+        void shouldDeleteCommentById() {
+            commentService.deleteComment(testCommentEntity.getId());
 
-                verify(commentRepository).deleteByCommentId(nonExistentId);
-            }
-
-            @Test
-            @DisplayName("Должен корректно удалить несколько комментариев подряд")
-            void shouldDeleteMultipleCommentsInRow() {
-                Long commentId1 = 1L;
-                Long commentId2 = 2L;
-                Long commentId3 = 3L;
-
-                commentService.deleteComment(commentId1);
-                commentService.deleteComment(commentId2);
-                commentService.deleteComment(commentId3);
-
-                verify(commentRepository).deleteByCommentId(commentId1);
-                verify(commentRepository).deleteByCommentId(commentId2);
-                verify(commentRepository).deleteByCommentId(commentId3);
-            }
+            boolean exists = commentRepository.existsById(testCommentEntity.getId());
+            assertThat(exists).isFalse();
         }
 
-        @Nested
-        @DisplayName("Тесты проверки существования поста")
-        class PostExistsTests {
-
-            @Test
-            @DisplayName("Должен вернуть true, если пост существует")
-            void shouldReturnTrueWhenPostExists() {
-                when(commentRepository.postExists(100L)).thenReturn(true);
-
-                boolean result = commentService.postExists(100L);
-
-                assertThat(result).isTrue();
-                verify(commentRepository).postExists(100L);
-            }
-
-            @Test
-            @DisplayName("Должен вернуть false, если пост не существует")
-            void shouldReturnFalseWhenPostNotExists() {
-                when(commentRepository.postExists(999L)).thenReturn(false);
-
-                boolean result = commentService.postExists(999L);
-
-                assertThat(result).isFalse();
-                verify(commentRepository).postExists(999L);
-            }
-
-            @Test
-            @DisplayName("Должен корректно обработать false при удалении несуществующего поста")
-            void shouldHandleFalseWhenPostNotExists() {
-                when(commentRepository.postExists(999L)).thenReturn(false);
-
-                boolean result = commentService.postExists(999L);
-
-                assertThat(result).isFalse();
-                verify(commentRepository).postExists(999L);
-            }
+        @Test
+        @DisplayName("При удалении несуществующего комментария не должно быть ошибки")
+        void shouldNotThrowErrorWhenDeletingNonExistentComment() {
+            commentService.deleteComment(99999L);
         }
 
-        @Nested
-        @DisplayName("Интеграционные тесты потока данных")
-        class IntegrationFlowTests {
+        @Test
+        @DisplayName("Должен корректно удалить несколько комментариев подряд")
+        void shouldDeleteMultipleCommentsInRow() {
+            CommentEntity comment2 = new CommentEntity();
+            comment2.setPost(testPost);
+            comment2.setText("Второй комментарий");
+            comment2 = commentRepository.save(comment2);
 
-            @Test
-            @DisplayName("Должен корректно обработать полный цикл CRUD операций")
-            void shouldHandleFullCrudCycle() {
-                when(commentRepository.save(any(CommentsEntity.class))).thenReturn(1L);
-                when(commentMapper.toResponse(any(CommentsEntity.class))).thenReturn(testCommentResponse);
+            CommentEntity comment3 = new CommentEntity();
+            comment3.setPost(testPost);
+            comment3.setText("Третий комментарий");
+            comment3 = commentRepository.save(comment3);
 
-                CommentResponse created = commentService.createComment(testCreateRequest);
-                assertThat(created).isNotNull();
+            commentService.deleteComment(testCommentEntity.getId());
+            commentService.deleteComment(comment2.getId());
+            commentService.deleteComment(comment3.getId());
 
-                when(commentRepository.findById(1L)).thenReturn(Optional.of(testCommentEntity));
-                when(commentMapper.toResponse(testCommentEntity)).thenReturn(testCommentResponse);
+            assertThat(commentRepository.existsById(testCommentEntity.getId())).isFalse();
+            assertThat(commentRepository.existsById(comment2.getId())).isFalse();
+            assertThat(commentRepository.existsById(comment3.getId())).isFalse();
+        }
+    }
 
-                CommentResponse found = commentService.getCommentById(1L);
-                assertThat(found).isEqualTo(testCommentResponse);
+    @Nested
+    @DisplayName("Тесты проверки существования комментариев у поста")
+    class PostExistsTests {
 
-                when(commentRepository.findById(1L)).thenReturn(Optional.of(testCommentEntity));
-                CommentResponse updated = commentService.updateComment(1L, testUpdateRequest);
-                assertThat(updated).isNotNull();
+        @Test
+        @DisplayName("Должен вернуть true, если у поста есть комментарии")
+        void shouldReturnTrueWhenPostHasComments() {
+            boolean result = commentService.postExists(testPost.getId());
 
-                commentService.deleteComment(1L);
-                verify(commentRepository).deleteByCommentId(1L);
-            }
+            assertThat(result).isTrue();
+        }
+
+        @Test
+        @DisplayName("Должен вернуть false для несуществующего поста")
+        void shouldReturnFalseForNonExistentPost() {
+            boolean result = commentService.postExists(99999L);
+
+            assertThat(result).isFalse();
+        }
+    }
+
+    @Nested
+    @DisplayName("Интеграционные тесты потока данных")
+    class IntegrationFlowTests {
+
+        @Test
+        @DisplayName("Должен корректно обработать полный цикл CRUD операций")
+        void shouldHandleFullCrudCycle() {
+            CommentResponse created = commentService.createComment(testCreateRequest);
+            assertThat(created).isNotNull();
+            Long commentId = created.getId();
+
+            CommentResponse found = commentService.getCommentById(commentId);
+            assertThat(found.getText()).isEqualTo("Новый комментарий");
+            assertThat(found.getPostId()).isEqualTo(testPost.getId());
+
+            CommentUpdateRequest updateRequest = CommentUpdateRequest.builder()
+                    .text("Обновленный текст")
+                    .build();
+            CommentResponse updated = commentService.updateComment(commentId, updateRequest);
+            assertThat(updated.getText()).isEqualTo("Обновленный текст");
+
+            CommentResponse verified = commentService.getCommentById(commentId);
+            assertThat(verified.getText()).isEqualTo("Обновленный текст");
+
+            commentService.deleteComment(commentId);
+
+            assertThatThrownBy(() -> commentService.getCommentById(commentId))
+                    .isInstanceOf(EntityNotFoundException.class);
+        }
+
+        @Test
+        @DisplayName("Должен корректно обработать несколько комментариев к одному посту")
+        void shouldHandleMultipleCommentsForSamePost() {
+            CommentCreateRequest request2 = CommentCreateRequest.builder()
+                    .postId(testPost.getId())
+                    .text("Второй комментарий")
+                    .build();
+
+            CommentCreateRequest request3 = CommentCreateRequest.builder()
+                    .postId(testPost.getId())
+                    .text("Третий комментарий")
+                    .build();
+
+            commentService.createComment(request2);
+            commentService.createComment(request3);
+
+            List<CommentResponse> comments = commentService.getCommentsByPostId(testPost.getId());
+
+            assertThat(comments).hasSize(3);
+            assertThat(comments).extracting(CommentResponse::getText)
+                    .containsExactlyInAnyOrder("Тестовый комментарий", "Второй комментарий", "Третий комментарий");
+        }
+
+        @Test
+        @DisplayName("Должен правильно обработать комментарии к разным постам")
+        void shouldHandleCommentsForDifferentPosts() {
+            PostEntity secondPost = new PostEntity();
+            secondPost.setTitle("Второй пост");
+            secondPost.setText("Содержимое второго поста");
+            secondPost.setLikesCount(0L);
+            secondPost = postRepository.save(secondPost);
+
+            CommentCreateRequest requestForSecondPost = CommentCreateRequest.builder()
+                    .postId(secondPost.getId())
+                    .text("Комментарий ко второму посту")
+                    .build();
+            commentService.createComment(requestForSecondPost);
+
+            List<CommentResponse> firstPostComments = commentService.getCommentsByPostId(testPost.getId());
+            assertThat(firstPostComments).hasSize(1);
+            assertThat(firstPostComments.getFirst().getText()).isEqualTo("Тестовый комментарий");
+
+            List<CommentResponse> secondPostComments = commentService.getCommentsByPostId(secondPost.getId());
+            assertThat(secondPostComments).hasSize(1);
+            assertThat(secondPostComments.getFirst().getText()).isEqualTo("Комментарий ко второму посту");
         }
     }
 }
